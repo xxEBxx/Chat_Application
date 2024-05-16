@@ -36,7 +36,10 @@ export default {
         alert(`Username: ${this.username}, Email: ${this.email}, Password: ${this.password}`);
       },
       async register(){
-        await auth.createUserWithEmailAndPassword(email.value,password.value)
+        await auth.createUserWithEmailAndPassword(email.value,password.value).then(
+          this.$router.push('/login')
+        )
+        
       }
     }
   };
