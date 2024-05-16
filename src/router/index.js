@@ -4,6 +4,8 @@ import HomeView from '../views/HomeView.vue'
 
 import Login from '../components/Login.vue';
 import Signin from '../components/Signin.vue';
+import test from '../components/test.vue';
+
 
 const routes = [
   {
@@ -20,6 +22,10 @@ const routes = [
     path: '/Signin',
     name: 'signin',
     component: Signin
+  },
+  {path:'/test_login',
+  name:'test',
+  component : test
   }
 ];
 

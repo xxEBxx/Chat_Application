@@ -16,6 +16,8 @@
   </template>
   
   <script>
+    import {auth} from '@/firebase/config.js'
+    import { signInWithEmailAndPassword } from 'firebase/auth';
 
   export default {
     data() {
@@ -25,10 +27,20 @@
       };
     },
     methods: {
-      login() {
-        // Here you can add your login logic, for simplicity, just alert the username
+      async login() {
+    try {
+        alert(`Here is email ${this.email} and mdp ${this.password}`);
+        
+        await auth.signInWithEmailAndPassword(this.email, this.password);
+        
         alert(`Logged in as ${this.username}`);
-      }
+        // put here the place of login and take the user id with you
+        this.$router.push('/test_login'); 
+    } catch (error) {
+        alert(`Login failed: ${error.message}`);
+    }
+}
+
     }
   };
   </script>

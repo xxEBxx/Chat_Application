@@ -1,7 +1,7 @@
 import firebase from 'firebase/app'
-import "firebase/auth"
+import 'firebase/auth'
 import 'firebase/firestore'
-
+import {setUser} from '../components/UserState'
 
 const firebaseConfig = {
   apiKey: "AIzaSyBGpnAIAVYljYWuySARpcNCaf1jE_jZQSs",
@@ -17,6 +17,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig)
 const auth = firebase.auth()
 const projectFirestore = firebase.firestore()
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    setUser(user);
+    console.log(`User ID: ${user.uid}`);
+  } else {
+    setUser(null);
+    console.log("User is signed out");
+  }
+});
 
 export {auth,projectFirestore}
 
