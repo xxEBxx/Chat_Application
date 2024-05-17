@@ -22,23 +22,52 @@
   <script>
   import {auth} from '@/firebase/config.js'
   import {createUserWithEmailAndPassword} from 'firebase/auth'
+  import {signInWithEmailAndPassword} from 'firebase/auth'
+  import { projectFirestore } from '../firebase/config.js'
   import {ref} from 'vue'
+  import {getUser} from './UserState'
 export default {
     data() {
       return {
+        user:null,
         username: '',
         email: '',
         password: ''
       };
     },
+   
     methods: {
       signup() {
         alert(`Username: ${this.username}, Email: ${this.email}, Password: ${this.password}`);
+
       },
       async register(){
         await auth.createUserWithEmailAndPassword(email.value,password.value).then(
           this.$router.push('/login')
         )
+        
+        this.user=getUser();
+        const user_to_add= {
+                                id:this.user.uid,
+                                lastSignInTime: this.user.metadata.lastSignInTime,
+                                creationTime: this.user.metadata.creationTime,
+                                email: this.user.email,
+                                location:"",
+                                user_name:this.username,
+                                photo_url:"",
+                                chats_binome:[""],
+                                chats_group:[""],
+                           }
+        try {
+        // Add the post data to Firestore (replace 'articles' with your collection name)
+        const docRef = await projectFirestore.collection('users').add(user_to_add);
+        console.log("user added successfully with ID: ", docRef.id);
+
+       
+      } catch (error) {
+        console.error("Error adding user to Firestore: ", error);
+        // Handle error here, show error message to the user, etc.
+      }
         
       }
     }
