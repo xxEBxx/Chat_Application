@@ -1,7 +1,7 @@
 <template>
     <div class="signup">
       <h2>Sign Up</h2>
-      <form @submit.prevent="signup">
+      <form @submit.prevent="register">
         <div class="form-group">
           <label for="username">Username</label>
           <input type="text" id="username" v-model="username" required>
@@ -14,18 +14,18 @@
           <label for="password">Password</label>
           <input type="password" id="password" v-model="password" required>
         </div>
-        <button type="submit" @click="register()">Sign Up</button>
+        <button type="submit" @click="">Sign Up</button>
       </form>
     </div>
+    <button @click="GOOGLE()">Sign in Using Google</button>
   </template>
   
   <script>
-  import {auth} from '@/firebase/config.js'
-  import {createUserWithEmailAndPassword} from 'firebase/auth'
-  import {signInWithEmailAndPassword} from 'firebase/auth'
-  import { projectFirestore } from '../firebase/config.js'
-  import {ref} from 'vue'
-  import {getUser} from './UserState'
+  import '@/firebase/config.js'
+  import {setUser,getUser} from './UserState'
+  import { signInGoogle ,projectFirestore} from '@/firebase/config.js';
+  import {auth} from '../firebase/config.js'
+
 export default {
     data() {
       return {
@@ -37,42 +37,49 @@ export default {
     },
    
     methods: {
-      signup() {
-        alert(`Username: ${this.username}, Email: ${this.email}, Password: ${this.password}`);
-
+      created() {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            setUser(user);
+            console.log(`User ID: ${user.uid}`);
+          } else {
+            setUser(null);
+            console.log("User is signed out");
+          }
+        });
       },
-      async register(){
-        await auth.createUserWithEmailAndPassword(email.value,password.value).then(
-          this.$router.push('/login')
-        )
-        
-        this.user=getUser();
-        const user_to_add= {
-                                id:this.user.uid,
-                                lastSignInTime: this.user.metadata.lastSignInTime,
-                                creationTime: this.user.metadata.creationTime,
-                                email: this.user.email,
-                                location:"",
-                                user_name:this.username,
-                                photo_url:"",
-                                chats_binome:[""],
-                                chats_group:[""],
-                           }
-        try {
-        // Add the post data to Firestore (replace 'articles' with your collection name)
-        const docRef = await projectFirestore.collection('users').add(user_to_add);
-        console.log("user added successfully with ID: ", docRef.id);
+      GOOGLE(){
+        signInGoogle();
+      },
+      async register() {
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(this.email, this.password);
+        this.user = userCredential.user;
+        console.log(`User ID: ${this.user.uid}`);
+        this.$router.push('/login');
 
-       
+        const user_to_add = {
+          id: this.user.uid,
+          lastSignInTime: this.user.metadata.lastSignInTime,
+          creationTime: this.user.metadata.creationTime,
+          email: this.user.email,
+          location: "",
+          user_name: this.username,
+          photo_url: "",
+          chats_binome: [""],
+          chats_group: [""],
+        };
+
+        // Use the UID as the document ID
+        const docRef = await projectFirestore.collection('users').doc(this.user.uid).set(user_to_add);
+        console.log("User added successfully with ID: ", this.user.uid);
       } catch (error) {
-        console.error("Error adding user to Firestore: ", error);
-        // Handle error here, show error message to the user, etc.
+        console.error("Error creating user:", error);
       }
-        
-      }
-    }
-  };
-  </script>
+    },
+  }
+};
+</script>
   
   <style scoped>
   .signup {

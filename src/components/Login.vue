@@ -17,7 +17,7 @@
   
   <script>
     import {auth} from '@/firebase/config.js'
-    import { signInWithEmailAndPassword } from 'firebase/auth';
+    import { getUser,setUser } from './UserState';
 
   export default {
     data() {
@@ -27,22 +27,32 @@
       };
     },
     methods: {
+      created() {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            setUser(user);
+            console.log(`User ID: ${user.uid}`);
+          } else {
+            setUser(null);
+            console.log("User is signed out");
+          }
+        })
+},
       async login() {
-    try {
-        alert(`Here is email ${this.email} and mdp ${this.password}`);
-        
-        await auth.signInWithEmailAndPassword(this.email, this.password);
-        
-        alert(`Logged in as ${this.username}`);
-        // put here the place of login and take the user id with you
-        this.$router.push('/test_login'); 
-    } catch (error) {
-        alert(`Login failed: ${error.message}`);
-    }
+        try {
+            alert(`Here is email ${this.email} and mdp ${this.password}`);
+            
+            await auth.signInWithEmailAndPassword(this.email, this.password);
+            
+            alert(`Logged in as ${this.username}`);
+            this.$router.push('/test_login'); 
+        } catch (error) {
+            alert(`Login failed: ${error.message}`);
+        }
 }
 
     }
-  };
+  }
   </script>
   
   <style scoped>

@@ -18,15 +18,15 @@ firebase.initializeApp(firebaseConfig)
 const auth = firebase.auth()
 const projectFirestore = firebase.firestore()
 
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    setUser(user);
-    console.log(`User ID: ${user.uid}`);
-  } else {
-    setUser(null);
-    console.log("User is signed out");
+const signInGoogle = async () => {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await firebase.auth().signInWithPopup(provider);
+    console.log('User signed in successfully:', result.user);
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
   }
-});
+};
 
-export {auth,projectFirestore}
+export {auth,projectFirestore,signInGoogle}
 
