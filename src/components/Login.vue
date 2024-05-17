@@ -40,12 +40,12 @@
 },
       async login() {
         try {
-            alert(`Here is email ${this.email} and mdp ${this.password}`);
+            alert(`Here is email ${this.email}`);
             
             await auth.signInWithEmailAndPassword(this.email, this.password);
             
             alert(`Logged in as ${this.username}`);
-            this.$router.push('/test_login'); 
+            this.$router.push('/whatsappHome'); 
         } catch (error) {
             alert(`Login failed: ${error.message}`);
         }

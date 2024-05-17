@@ -5,6 +5,7 @@ import HomeView from '../views/HomeView.vue'
 import Login from '../components/Login.vue';
 import Signin from '../components/Signin.vue';
 import test from '../components/test.vue';
+import WhatsappHome from '@/components/WhatsappHome.vue';
 
 
 const routes = [
@@ -23,9 +24,10 @@ const routes = [
     name: 'signin',
     component: Signin
   },
-  {path:'/test_login',
-  name:'test',
-  component : test
+  {
+    path:'/whatsappHome',
+    name: 'whatsappHome',
+    component: WhatsappHome
   }
 ];
 
