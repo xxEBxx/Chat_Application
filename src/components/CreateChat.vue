@@ -15,6 +15,23 @@
       @input="searchUsers"
       placeholder="Search users by username..."
     />
+
+    <div v-if="selectedUsers.length>0">
+      <h4>Selected Users</h4>
+      <ul>
+        <li v-for="user in selectedUsers" :key="user.id">{{ user.user_name }}</li>
+      </ul>
+    </div>
+
+    <div v-if="chatType === 'binome' && selectedUsers.length > 0">
+      <h4>Selected User for Binome Chat</h4>
+      <p>{{ selectedUsers[0].user_name }}</p>
+      <input
+        type="text"
+        placeholder="Binome chat input"
+        v-model="text_to_send"
+      />  
+    </div>
     <ul>
       <li v-for="user in filteredUsers" :key="user.id">
         <p class="username">{{ user.user_name }}</p>
@@ -25,21 +42,22 @@
       </li>
     </ul>
     <div v-if="chatType === 'group' && selectedUsers.length > 0">
-      <h4>Selected Users for Group Chat</h4>
-      <ul>
-        <li v-for="user in selectedUsers" :key="user.id">{{ user.user_name }}</li>
-      </ul>
-    </div>
-    <div v-if="chatType === 'binome' && selectedUsers.length > 0">
-      <h4>Selected User for Binome Chat</h4>
-      <p>{{ selectedUsers[0].user_name }}</p>
+      Groupchat Name
+      <input
+        type="text"
+        v-model="groupName"
+        placeholder="Enter group name"
+        required
+      />
     </div>
     <button @click="submitChat" v-if="selectedUsers.length > 0">Submit</button>
+    
   </div>
 </template>
 
 <script>
 import { projectFirestore } from '../firebase/config';
+import { getUser } from './UserState';
 
 export default {
   name: 'CreateChat',
@@ -49,7 +67,9 @@ export default {
       users: [],
       filteredUsers: [],
       selectedUsers: [],
-      chatType: 'group', // Default to group chat
+      chatType: 'group', 
+      groupName: '', 
+      text_to_send:''
     };
   },
   methods: {
@@ -87,9 +107,8 @@ export default {
       } else {
         if (this.selectedUsers.length === 0) {
           this.selectedUsers.push(user);
-        }
-        else{
-          this.selectedUsers=[user];
+        } else {
+          this.selectedUsers = [user];
         }
       }
     },
@@ -98,15 +117,100 @@ export default {
     },
     async submitChat() {
       try {
-        if (this.chatType === 'group') {
-          console.log('Creating group chat with users:', this.selectedUsers);
-          // Add the logic to handle creating a group chat with selected users
+    const creatorId = getUser().uid;
+
+    if (this.chatType === 'group') {
+      console.log('Creating group chat with name:', this.groupName, 'and users:', this.selectedUsers);
+
+      const groupChatRef = await projectFirestore.collection('messages_group').add({
+        group_name: this.groupName,
+        members: [...this.selectedUsers.map(user => user.id), creatorId],
+        created_at: Date.now(),
+        creator_id: creatorId,
+        last_message: {
+          sender: creatorId,
+          text: this.text_to_send,
+          timestamp: Date.now(),
+          viewed_by: [],
+        },
+        messages: [{
+          sender: creatorId,
+          text: this.text_to_send,
+          timestamp: Date.now(),
+          viewed_by: [],
+        }],
+      });
+
+      const groupId = groupChatRef.id;
+
+      // Update each user's document to include the new group chat ID
+      const batch = projectFirestore.batch();
+      this.selectedUsers.forEach(async (user) => {
+        const userRef = projectFirestore.collection('users').doc(user.id);
+        const updatedData = await userRef.get();
+        const updatedChats = updatedData.data().chats_group || [];
+        const toAddChats = [...updatedChats, groupId];
+        batch.update(userRef, {
+          chats_group: toAddChats
+        });
+      });
+
+      const creatorRef = projectFirestore.collection('users').doc(creatorId);
+      const creatorData = await creatorRef.get();
+      const creatorChats = creatorData.data().chats_group || [];
+      const toAddCreatorChats = [...creatorChats, groupId];
+      batch.update(creatorRef, {
+        chats_group: toAddCreatorChats
+      });
+
+      await batch.commit();
+
+      console.log('Group chat created with ID:', groupId);
         } else {
-          console.log('Creating binome chat with user:', this.selectedUsers[0]);
-          // Add the logic to handle creating a binome chat with the selected user
+          const creatorId = getUser().uid; 
+          const otherUser = this.selectedUsers[0].id;
+
+
+          // Create a new document in the messages_binome collection
+          const binomeChatRef = await projectFirestore.collection('messages_binome').add({
+            creator_id: creatorId,
+            other_id: otherUser,
+            last_message: {
+              sender: creatorId,
+              text: this.text_to_send,
+              timestamp: Date.now(),
+              viewed: false
+            },
+            list_mess:[{
+              sender: creatorId,
+              text: this.text_to_send,
+              timestamp: Date.now(),
+              viewed: false
+            }]
+          });
+
+          const chatId = binomeChatRef.id;
+          const updated_data=await projectFirestore.collection('users').doc(creatorId).get();
+          const updated_chats=updated_data.data().chats_binome;
+          const to_add_chats=[...updated_chats,chatId];
+          
+          await projectFirestore.collection('users').doc(creatorId).update({
+            chats_binome:to_add_chats
+          });
+
+          const updated_data1=await projectFirestore.collection('users').doc(otherUser).get();
+          const updated_chats1=updated_data1.data().chats_binome;
+          const to_add_chats1=[...updated_chats1,chatId];
+          
+          await projectFirestore.collection('users').doc(otherUser).update({
+            chats_binome:to_add_chats1
+          });
+
+          console.log('Binome chat created with ID:', chatId);
         }
         // Clear the selection after submission
         this.selectedUsers = [];
+        this.groupName = '';
       } catch (error) {
         console.error('Error submitting chat:', error);
       }
