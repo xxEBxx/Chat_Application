@@ -4,13 +4,13 @@ import 'firebase/firestore'
 import {setUser} from '../components/UserState'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBGpnAIAVYljYWuySARpcNCaf1jE_jZQSs",
-  authDomain: "firstproject-2e10a.firebaseapp.com",
-  projectId: "firstproject-2e10a",
-  storageBucket: "firstproject-2e10a.appspot.com",
-  messagingSenderId: "804169837571",
-  appId: "1:804169837571:web:e44e80ba587a9a8ba13236",
-  measurementId: "G-YGWCN654ZQ"
+  apiKey: "AIzaSyAzanJSdxCJkH-Sxg7tJ_cNwD31tt487zs",
+  authDomain: "connectify-595ba.firebaseapp.com",
+  projectId: "connectify-595ba",
+  storageBucket: "connectify-595ba.appspot.com",
+  messagingSenderId: "227159052993",
+  appId: "1:227159052993:web:675ac2698a3f703e913a40",
+  measurementId: "G-BQ7GRLDV4L"
 };
 
 
