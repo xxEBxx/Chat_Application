@@ -57,19 +57,22 @@ addusersToFirestore(usersData);
 
 
 const messages_binom_Data = [
- 
   {
-    last_msg:"",
-    last_time:"",
-    msg_num:"",
-    list_mess:{
-      id:"",
-      content:"",
-      seen:false,
+    last_msg:{
+      sender:"",
       timestamp:"",
-    }
+      text:"",
+      viewed:"",
+      seen:false,
+    },
+    list_mess:[{
+      sender:"",
+      timestamp:"",
+      text:"",
+      viewed:"",
+      seen:false
+    }]
   },
-  
 
 
 ];
@@ -100,13 +103,15 @@ const messages_group_Data = [
       sender:"",
       timestamp:"",
       text:"",
-      viewed:""
+      viewed:"",
+      seen:false,
     },
     list_mess:[{
-      id:"",
-      content:"",
-      seen:false,
+      sender:"",
       timestamp:"",
+      text:"",
+      viewed:"",
+      seen:false
     }]
   },
   
