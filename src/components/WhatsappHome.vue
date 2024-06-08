@@ -4,11 +4,14 @@
       <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
       <p @click="goto_home" :class="{ 'active': !go }">Home</p>
     </nav>
-    <profile v-if="go"/>
-    <chat v-else :user-data="userData" />
-    <CreateChat />
+    <div>
+      <profile v-if="go"/>
+      <chat v-else :user-data="userData" />
+      <CreateChat/>
+    </div>
   </div>
 </template>
+
 
 <script>
 import { auth } from '@/firebase/config.js'
@@ -16,6 +19,7 @@ import { projectFirestore } from '@/firebase/config.js'
 import profile from "@/components/profile.vue";
 import chat from "@/components/Home.vue";
 import CreateChat from "@/components/CreateChat.vue"
+
 export default {
   name: "whatsappHome",
   components: {
@@ -62,13 +66,19 @@ export default {
 };
 </script>
 
-<style scoped>
+<style scoped>/* Navbar Styles */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #333; /* Dark background color */
   padding: 10px;
+  position: fixed; /* Fix the navbar at the top */
+  top: 0;
+  left: 0;
+  width: 100%; /* Full width */
+  z-index: 1000; /* Ensure the navbar is above other content */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
 }
 
 .navbar p {
@@ -96,10 +106,28 @@ export default {
   margin-right: 0;
 }
 
+/* Main Container Adjustments */
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  text-align: center;
+  color: #333; /* Darker gray for primary text */
+  margin-top: 100px; /* Adjust for fixed navbar */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f5f5f5; /* Light gray background */
+}
+
 /* Additional styles for responsiveness */
 @media screen and (max-width: 600px) {
   .navbar p {
     margin: 0 10px;
   }
+  .button-container {
+    left: 10px; /* Adjust padding for smaller screens */
+  }
+  button {
+    padding: 8px 16px; /* Adjust button padding for smaller screens */
+}
 }
 </style>
