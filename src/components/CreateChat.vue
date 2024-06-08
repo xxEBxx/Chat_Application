@@ -1,4 +1,3 @@
-// src/components/UserSearch.vue
 <template>
   <div>
     <h3>Add a Conversation</h3>
@@ -20,9 +19,22 @@
       <li v-for="user in filteredUsers" :key="user.id">
         <p class="username">{{ user.user_name }}</p>
         <p class="email">{{ user.email }}</p>
-        <button @click="addChat(user.id)">Add to {{ chatType === 'group' ? 'Group' : 'Binome' }} Chat</button>
+        <button @click="toggleUser(user)">
+          {{ isUserSelected(user.id) ? 'Remove from' : 'Add to' }} {{ chatType === 'group' ? 'Group' : 'Binome' }} Chat
+        </button>
       </li>
     </ul>
+    <div v-if="chatType === 'group' && selectedUsers.length > 0">
+      <h4>Selected Users for Group Chat</h4>
+      <ul>
+        <li v-for="user in selectedUsers" :key="user.id">{{ user.user_name }}</li>
+      </ul>
+    </div>
+    <div v-if="chatType === 'binome' && selectedUsers.length > 0">
+      <h4>Selected User for Binome Chat</h4>
+      <p>{{ selectedUsers[0].user_name }}</p>
+    </div>
+    <button @click="submitChat" v-if="selectedUsers.length > 0">Submit</button>
   </div>
 </template>
 
@@ -36,6 +48,7 @@ export default {
       searchTerm: '',
       users: [],
       filteredUsers: [],
+      selectedUsers: [],
       chatType: 'group', // Default to group chat
     };
   },
@@ -58,21 +71,44 @@ export default {
         user.user_name.toLowerCase().includes(this.searchTerm.toLowerCase())
       );
     },
-    async addChat(userId) {
-      try {
-        const user = await projectFirestore.collection('users').doc(userId).get();
-
-        if (this.chatType === 'group') {
-          // Logic to add user to group chat
-          console.log(`Adding user ${userId} to group chat`);
-          // Add the logic to handle adding the user to a group chat
-        } else {
-          // Logic to create or add to binome chat
-          console.log(`Adding user ${userId} to binome chat`);
-          // Add the logic to handle creating or adding to a binome chat
+    isUserSelected(userId) {
+      return this.selectedUsers.some(user => user.id === userId);
+    },
+    toggleUser(user) {
+      if (this.isUserSelected(user.id)) {
+        this.removeChat(user.id);
+      } else {
+        this.addChat(user);
+      }
+    },
+    addChat(user) {
+      if (this.chatType === 'group') {
+        this.selectedUsers.push(user);
+      } else {
+        if (this.selectedUsers.length === 0) {
+          this.selectedUsers.push(user);
         }
+        else{
+          this.selectedUsers=[user];
+        }
+      }
+    },
+    removeChat(userId) {
+      this.selectedUsers = this.selectedUsers.filter(user => user.id !== userId);
+    },
+    async submitChat() {
+      try {
+        if (this.chatType === 'group') {
+          console.log('Creating group chat with users:', this.selectedUsers);
+          // Add the logic to handle creating a group chat with selected users
+        } else {
+          console.log('Creating binome chat with user:', this.selectedUsers[0]);
+          // Add the logic to handle creating a binome chat with the selected user
+        }
+        // Clear the selection after submission
+        this.selectedUsers = [];
       } catch (error) {
-        console.error('Error adding user to chat:', error);
+        console.error('Error submitting chat:', error);
       }
     },
   },
