@@ -6,6 +6,7 @@
     </nav>
     <profile v-if="go"/>
     <chat v-else :user-data="userData" />
+    <CreateChat />
   </div>
 </template>
 
@@ -14,12 +15,13 @@ import { auth } from '@/firebase/config.js'
 import { projectFirestore } from '@/firebase/config.js'
 import profile from "@/components/profile.vue";
 import chat from "@/components/Home.vue";
-
+import CreateChat from "@/components/CreateChat.vue"
 export default {
   name: "whatsappHome",
   components: {
     profile,
-    chat
+    chat,
+    CreateChat
   },
   data() {
     return {

@@ -1,10 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
-
 import Login from '../components/Login.vue';
 import Signin from '../components/Signin.vue';
-
 import WhatsappHome from '@/components/WhatsappHome.vue';
 
 

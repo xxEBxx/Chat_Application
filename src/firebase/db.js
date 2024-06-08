@@ -96,15 +96,18 @@ const addmessage1ToFirestore = async (messages_binom_Data) => {
 const messages_group_Data = [
  
   {
-    last_msg:"",
-    last_time:"",
-    msg_num:"",
-    list_mess:{
+    last_msg:{
+      sender:"",
+      timestamp:"",
+      text:"",
+      viewed:""
+    },
+    list_mess:[{
       id:"",
       content:"",
       seen:false,
       timestamp:"",
-    }
+    }]
   },
   
 
