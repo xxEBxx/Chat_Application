@@ -5,6 +5,7 @@
       <p @click="goto_home" :class="{ 'active': !go }">Home</p>
     </nav>
     <profile v-if="go"/>
+    bla bla bal bal bal
     <chat v-if="chat_bin && userData" :chats="userData.chats_binome"/>
     <chat v-if="!chat_bin && userData" :chats="userData.chats_group"/>
   </div>

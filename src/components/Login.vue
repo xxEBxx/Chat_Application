@@ -40,13 +40,13 @@
 },
       async login() {
         try {
-            alert(`Here is email ${this.email}`);
+          
             
             const userCredential=await auth.signInWithEmailAndPassword(this.email, this.password);
             this.user = userCredential.user;
             console.log(`User ID: ${this.user.uid}`);
             setUser(this.user);
-            alert(`Logged in as ${this.username} and user is ${getUser().uid}`);
+           
             this.$router.push('/whatsappHome'); 
         } catch (error) {
             alert(`Login failed: ${error.message}`);
