@@ -14,28 +14,32 @@
       <div v-else>
         <div>
           <label>
+            <strong>Image URL:</strong>
+            <input v-model="userDoc.image" />
+          </label>
+        </div>
+        <div>
+          <label>
             <strong>Name:</strong>
             <input v-model="userDoc.user_name" />
           </label>
         </div>
         <div>
           <label>
-            <strong>Email:</strong>
-            <input v-model="userDoc.email" type="email" />
-          </label>
-        </div>
-        <div>
-          <label>
             <strong>Location:</strong>
-            <input v-model="userDoc.location" />
+            <input v-model="locationQuery" @input="fetchCountries" />
           </label>
+          <ul v-if="countries.length">
+            <li v-for="country in countries" :key="country.cca3" @click="selectCountry(country.name.common)">
+              {{ country.name.common }}
+            </li>
+          </ul>
         </div>
         <button @click="saveProfile">Save</button>
       </div>
     </div>
   </div>
 </template>
-
 
 <script>
 import { projectFirestore } from '@/firebase/config.js';
@@ -49,7 +53,9 @@ export default {
       userDoc: null,
       loading: true,
       error: null,
-      editing: false
+      editing: false,
+      locationQuery: '',
+      countries: []
     };
   },
   async beforeMount() {
@@ -74,16 +80,60 @@ export default {
         const id = this.user.uid;
         await projectFirestore.collection('users').doc(id).update(this.userDoc);
         this.error = null;
-        this.$router.push('/whatsappHome');
+        this.editing = false;
       } catch (err) {
         this.error = 'Failed to save user data.';
       } finally {
         this.loading = false;
       }
     },
+    async fetchCountries() {
+      if (this.locationQuery.length > 2) {
+        try {
+          const response = await fetch('https://restcountries.com/v3.1/all');
+          const data = await response.json();
+          this.countries = data.filter(country =>
+            country.name.common.toLowerCase().includes(this.locationQuery.toLowerCase())
+          );
+        } catch (err) {
+          console.error('Failed to fetch countries:', err);
+        }
+      } else {
+        this.countries = [];
+      }
+    },
+    selectCountry(countryName) {
+      this.userDoc.location = countryName;
+      this.locationQuery = countryName;
+      this.countries = [];
+    }
   }
 };
 </script>
+
+<style>
+/* Add some basic styling */
+.profile {
+  max-width: 600px;
+  margin: auto;
+}
+.profile-image {
+  max-width: 100px;
+  border-radius: 50%;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+li {
+  cursor: pointer;
+  padding: 5px;
+}
+li:hover {
+  background-color: #f0f0f0;
+}
+</style>
+
 
 <style scoped>
 .profile {
