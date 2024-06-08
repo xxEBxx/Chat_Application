@@ -5,9 +5,7 @@
       <p @click="goto_home" :class="{ 'active': !go }">Home</p>
     </nav>
     <profile v-if="go"/>
-    bla bla bal bal bal
-    <chat v-if="chat_bin && userData" :chats="userData.chats_binome"/>
-    <chat v-if="!chat_bin && userData" :chats="userData.chats_group"/>
+    <chat v-else :user-data="userData" />
   </div>
 </template>
 
@@ -15,7 +13,7 @@
 import { auth } from '@/firebase/config.js'
 import { projectFirestore } from '@/firebase/config.js'
 import profile from "@/components/profile.vue";
-import chat from "@/components/Chat.vue";
+import chat from "@/components/Home.vue";
 
 export default {
   name: "whatsappHome",
