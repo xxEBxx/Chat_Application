@@ -79,6 +79,7 @@ export default {
   }
 };
 </script>
+
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
@@ -89,27 +90,31 @@ export default {
   flex-direction: column;
   align-items: center;
 }
-
+/* Button Container Styles */
 .button-container {
   display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
+  flex-direction: row; /* Stack buttons vertically */
+  justify-content: flex-start; /* Align buttons to the start (top) */
+  position: fixed; /* Fix the button container */
+  top: 60px; /* Position below the navbar */
+  left: 10px; /* Align to the left edge of the page with some padding */
+  z-index: 1000; /* Ensure the button container is above other content */
 }
 
 button {
-  margin: 10px;
+  margin: 5px 5px; /* Vertical margin for stacking */
   padding: 10px 20px;
   font-size: 16px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  background-color: #007bff;
+  background-color: #4a4a4a; /* Matching the vibe of the app */
   color: white;
   transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 button.active, button:hover {
-  background-color: #0056b3;
+  background-color: #333; /* Darker gray for active and hover state */
   transform: scale(1.05);
 }
 
@@ -121,7 +126,7 @@ button.active, button:hover {
 
 .chat-item {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #ddd; /* Light gray border */
   border-radius: 5px;
   margin: 10px 0;
   cursor: pointer;
@@ -129,7 +134,7 @@ button.active, button:hover {
 }
 
 .chat-item:hover {
-  background-color: #f1f1f1;
+  background-color: #e0e0e0; /* Slightly darker gray for hover */
 }
 
 .messages-container {
@@ -138,20 +143,21 @@ button.active, button:hover {
 
 .message-item {
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #ddd; /* Light gray border */
 }
 
 .message-input {
   width: calc(100% - 20px);
   padding: 10px;
   margin-top: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #ddd; /* Light gray border */
   border-radius: 5px;
   outline: none;
+  background-color: #f9f9f9; /* Very light gray background */
 }
 
 .message-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  border-color: #4a4a4a; /* Dark gray for focus */
+  box-shadow: 0 0 5px rgba(74, 74, 74, 0.5); /* Gray shadow */
 }
 </style>

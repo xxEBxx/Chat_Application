@@ -5,13 +5,37 @@
     <div v-if="error">{{ error }}</div>
     <div v-if="user">
       <img :src="userDoc.image" alt="Profile Picture" class="profile-image"/>
-      <p><strong>Name:</strong> {{ userDoc.user_name }}</p>
-      <p><strong>Email:</strong> {{ userDoc.email }}</p>
-      <p><strong>Location:</strong> {{ userDoc.location }}</p>
+      <div v-if="!editing">
+        <p><strong>Name:</strong> {{ userDoc.user_name }}</p>
+        <p><strong>Email:</strong> {{ userDoc.email }}</p>
+        <p><strong>Location:</strong> {{ userDoc.location }}</p>
+        <button @click="editProfile">Edit</button>
+      </div>
+      <div v-else>
+        <div>
+          <label>
+            <strong>Name:</strong>
+            <input v-model="userDoc.user_name" />
+          </label>
+        </div>
+        <div>
+          <label>
+            <strong>Email:</strong>
+            <input v-model="userDoc.email" type="email" />
+          </label>
+        </div>
+        <div>
+          <label>
+            <strong>Location:</strong>
+            <input v-model="userDoc.location" />
+          </label>
+        </div>
+        <button @click="saveProfile">Save</button>
+      </div>
     </div>
-   
   </div>
 </template>
+
 
 <script>
 import { projectFirestore } from '@/firebase/config.js';
@@ -24,7 +48,8 @@ export default {
       user: null,
       userDoc: null,
       loading: true,
-      error: null
+      error: null,
+      editing: false
     };
   },
   async beforeMount() {
@@ -40,9 +65,22 @@ export default {
     }
   },
   methods: {
-    goHome() {
-      this.$router.push('/whatsappHome');
-    }
+    editProfile() {
+      this.editing = true;
+    },
+    async saveProfile() {
+      this.loading = true;
+      try {
+        const id = this.user.uid;
+        await projectFirestore.collection('users').doc(id).update(this.userDoc);
+        this.error = null;
+        this.$router.push('/whatsappHome');
+      } catch (err) {
+        this.error = 'Failed to save user data.';
+      } finally {
+        this.loading = false;
+      }
+    },
   }
 };
 </script>
@@ -72,13 +110,22 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.profile p {
+.profile div {
   margin-bottom: 10px;
+}
+
+.profile label {
+  display: flex;
+  flex-direction: column;
   font-weight: bold;
 }
 
-.profile p strong {
-  margin-right: 10px;
+.profile input {
+  padding: 5px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-top: 5px;
 }
 
 .profile button {
@@ -94,4 +141,5 @@ export default {
 .profile button:hover {
   background-color: #444;
 }
+
 </style>
