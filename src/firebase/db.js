@@ -53,26 +53,34 @@ const addusersToFirestore = async (usersData) => {
 };
 
 // Call the function to add posts data to Firestore
-addusersToFirestore(usersData);
+//addusersToFirestore(usersData);
 
 
 const messages_binom_Data = [
+ 
   {
     last_msg:{
-      sender:"",
-      timestamp:"",
-      text:"",
-      viewed:"",
-      seen:false,
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
     },
     list_mess:[{
-      sender:"",
-      timestamp:"",
-      text:"",
-      viewed:"",
-      seen:false
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },{
+      sender:"Pr7EGX0BD3YzCLZ7vG55fQCZfD73",
+      timestamp:"9:10 am",
+      text:"hi",
+      viewed:true,
+      
     }]
   },
+  
 
 
 ];
@@ -94,24 +102,30 @@ const addmessage1ToFirestore = async (messages_binom_Data) => {
   };
   
   // Call the function to add posts data to Firestore
-  //addmessage1ToFirestore(messages_binom_Data);
+addmessage1ToFirestore(messages_binom_Data);
 
 const messages_group_Data = [
  
   {
     last_msg:{
-      sender:"",
-      timestamp:"",
-      text:"",
-      viewed:"",
-      seen:false,
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
     },
     list_mess:[{
-      sender:"",
-      timestamp:"",
-      text:"",
-      viewed:"",
-      seen:false
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },{
+      sender:"Pr7EGX0BD3YzCLZ7vG55fQCZfD73",
+      timestamp:"9:10 am",
+      text:"hi",
+      viewed:true,
+      
     }]
   },
   
@@ -137,4 +151,4 @@ console.error("Error adding users to Firestore: ", error);
 };
 
 // Call the function to add posts data to Firestore
-//addmessagesgroupToFirestore(messages_group_Data);
+addmessagesgroupToFirestore(messages_group_Data);
