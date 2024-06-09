@@ -5,12 +5,11 @@
         <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
         <p @click="goto_home" :class="{ 'active': !go }">Home</p>
       </nav>
-      <CreateChat v-if="!go" class="create-chat"/>
-      </div>
+    </div>      
+    <CreateChat v-if="!go" class="create-chat"/>
     <div class="main-container">
       <profile v-if="go"/>
       <chat v-else :user-data="userData" />
-      
     </div>
   </div>
 </template>

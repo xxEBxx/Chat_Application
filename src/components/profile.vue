@@ -11,7 +11,6 @@
           <p><strong>Email:</strong> {{ userDoc.email }}</p>
           <p><strong>Location:</strong> {{ userDoc.location }}</p>
           <button @click="editProfile">Edit</button>
-          <button @click="gotoHome">Go Home</button>
         </div>
         <div v-else>
           <div>
@@ -109,9 +108,6 @@ export default {
       this.userDoc.location = countryName;
       this.locationQuery = countryName;
       this.countries = [];
-    },
-    gotoHome() {
-      this.$emit('/whatsappHome');
     }
   }
 };
