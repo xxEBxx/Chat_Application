@@ -98,8 +98,8 @@
         email: this.user.email,
         location: this.selectedCountry, // Update location to use selectedCountry
         user_name: this.username,
-        chats_binome:[""],
-        chats_group:[""],
+        chats_binome:[],
+        chats_group:[],
         image:this.image
       
       };
