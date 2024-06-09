@@ -160,7 +160,7 @@ export default {
         last_message_text: this.text_to_send,
         last_message_timestamp: Date.now(),
         last_message_viewed_by: [],
-        messages: [{
+        list_mess: [{
           sender: creatorId,
           text: this.text_to_send,
           timestamp: Date.now(),
@@ -255,6 +255,7 @@ export default {
   display: flex;
   flex-direction: column;
   max-width: 500px;
+  color: #fff;
 }
 
 /* Header styles */

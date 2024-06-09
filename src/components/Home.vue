@@ -343,4 +343,44 @@ button.active, button:hover {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
+
+/* CreateChat Component Styling */
+.create-chat {
+  margin-top: 20px;
+  width: 80%;
+  max-width: 600px;
+  padding: 10px 20px;
+  background-color: #fff; /* White background */
+  border: 1px solid #ccc; /* Light border */
+  border-radius: 24px; /* Rounded corners */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  display: flex;
+  align-items: center;
+  z-index: 600; 
+}
+
+.create-chat input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 24px;
+}
+
+.create-chat button {
+  border: none;
+  background-color: #007bff; /* Blue button */
+  color: #fff;
+  padding: 10px 20px;
+  margin-left: 10px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.create-chat button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
 </style>
