@@ -31,7 +31,7 @@ export default {
 
     onMounted(async () => {
       await fetchChatDetails();
-      await fetchMessages();
+      subscribeToMessages();
     });
 
     const fetchChatDetails = async () => {
@@ -45,16 +45,17 @@ export default {
       }
     };
 
-    const fetchMessages = async () => {
+    const subscribeToMessages = () => {
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
-      const chatDoc = await chatRef.get();
-      if (chatDoc.exists) {
-        messages.value = chatDoc.data().list_mess || [];
-        messages.value.forEach(message => fetchUser(message.sender));
-        console.log(`Fetched messages: `, messages.value);
-      } else {
-        console.error(`No chat found with id: ${props.id}`);
-      }
+      chatRef.onSnapshot(chatDoc => {
+        if (chatDoc.exists) {
+          messages.value = chatDoc.data().list_mess || [];
+          messages.value.forEach(message => fetchUser(message.sender));
+          console.log(`Fetched messages: `, messages.value);
+        } else {
+          console.error(`No chat found with id: ${props.id}`);
+        }
+      });
     };
 
     const fetchUser = async (userId) => {
@@ -89,12 +90,13 @@ export default {
         if (chatDoc.exists) {
           const currentMessages = chatDoc.data().list_mess || [];
           currentMessages.push(message);
-          await chatRef.update({ 
+          await chatRef.update({
             last_message_sender: currentUser.uid,
             last_message_text: newMessage.value,
             last_message_timestamp: Date.now(),
             last_message_viewed: false,
-            list_mess: currentMessages });
+            list_mess: currentMessages
+          });
           newMessage.value = '';
         } else {
           console.error(`No chat found with id: ${props.id}`);
@@ -103,10 +105,17 @@ export default {
     };
 
     const formatTimestamp = (timestamp) => {
-      if (!timestamp) return 'Loading...';
-      const date = new Date(timestamp.seconds * 1000);
-      return date.toLocaleString();
-    };
+    if (!timestamp) return 'Loading...';
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 
     return {
       chat,
