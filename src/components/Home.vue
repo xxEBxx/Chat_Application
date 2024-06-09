@@ -3,7 +3,11 @@
     <div class="button-container">
       <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
       <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
+      <button @click="createNewChat" :class="{ active: go }">Create New Chat</button>
     </div>
+    
+    <CreateChat v-if="go" class="create-chat"/>
+    
     <div v-if="selectedChatType" class="chat-container">
       <div v-if="selectedChatType === 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
@@ -26,8 +30,10 @@
         </div>
       </div>
     </div>
+    <div>
     <Chat_details_binome v-if="check_comp_to_show('binome')" :id="id_to_pass"/>
     <Chat_details_group v-if="check_comp_to_show('group')" :id="id_to_pass"/>
+      </div>
   </div>
 </template>
 
@@ -37,12 +43,14 @@ import firebase from 'firebase/app';
 import { reactive, ref, computed, watch } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
 import Chat_details_binome from './Chat_details_binome.vue';
+import CreateChat from  './CreateChat.vue'
 
 export default {
   name: 'Home',
   components: { 
     Chat_details_group,
-    Chat_details_binome
+    Chat_details_binome,
+    CreateChat
   },
   props: {
     userData: {
@@ -164,6 +172,10 @@ export default {
       });
     };
 
+    const createNewChat = () => {
+      go.value = !(go.value);
+    };
+
     const fetchUser = async (userId) => {
       if (!users[userId]) {
         const userRef = projectFirestore.collection('users').doc(userId);
@@ -236,7 +248,8 @@ export default {
       details_grp,
       sortedChatIds,
       change_cred,
-      check_comp_to_show
+      check_comp_to_show,
+      go
     };
   }
 };
