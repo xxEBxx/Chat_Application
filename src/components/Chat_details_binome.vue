@@ -1,6 +1,6 @@
 <template>
   <div class="chat-details">
-    <h2>{{ 'Chat' }}</h2>
+    <h2>{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.id" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <p><strong>{{ getUserName(message.sender) }}:</strong> {{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
@@ -28,6 +28,7 @@ export default {
     const users = reactive({});
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
+    const chatTitle = ref('Loading...');
 
     onMounted(async () => {
       await fetchChatDetails();
@@ -39,7 +40,9 @@ export default {
       const chatDoc = await chatRef.get();
       if (chatDoc.exists) {
         chat.value = { id: props.id, ...chatDoc.data() };
-        console.log(`Fetched chat details: `, chat.value);
+        const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
+        await fetchUser(otherUserId);
+        chatTitle.value = users[otherUserId] || 'Unknown User';
       } else {
         console.error(`No chat found with id: ${props.id}`);
       }
@@ -51,7 +54,6 @@ export default {
         if (chatDoc.exists) {
           messages.value = chatDoc.data().list_mess || [];
           messages.value.forEach(message => fetchUser(message.sender));
-          console.log(`Fetched messages: `, messages.value);
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
@@ -105,7 +107,7 @@ export default {
     };
 
     const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'Loading...';
+      if (!timestamp) return 'Loading...';
       const date = new Date(timestamp);
       const year = date.getFullYear();
       const month = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -113,9 +115,8 @@ export default {
       const hours = ('0' + date.getHours()).slice(-2);
       const minutes = ('0' + date.getMinutes()).slice(-2);
       const seconds = ('0' + date.getSeconds()).slice(-2);
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
 
     return {
       chat,
@@ -124,7 +125,8 @@ export default {
       getUserName,
       sendMessage,
       formatTimestamp,
-      currentUser
+      currentUser,
+      chatTitle
     };
   }
 };
