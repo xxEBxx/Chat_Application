@@ -12,12 +12,10 @@
       <div v-if="selectedChatType === 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
         <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
-
           <div @click="change_cred('binome',chatId)">
             <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
             <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}  {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
           </div>
-
         </div>
       </div>
       <div v-if="selectedChatType !== 'solo'">
@@ -31,9 +29,9 @@
       </div>
     </div>
     <div>
-    <Chat_details_binome v-if="check_comp_to_show('binome')" :id="id_to_pass"/>
-    <Chat_details_group v-if="check_comp_to_show('group')" :id="id_to_pass"/>
-      </div>
+      <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
+      <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
+    </div>
   </div>
 </template>
 
@@ -43,7 +41,7 @@ import firebase from 'firebase/app';
 import { reactive, ref, computed, watch } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
 import Chat_details_binome from './Chat_details_binome.vue';
-import CreateChat from  './CreateChat.vue'
+import CreateChat from './CreateChat.vue';
 
 export default {
   name: 'Home',
@@ -60,10 +58,9 @@ export default {
     }
   },
   setup(props) {
-    const go=ref(false);
+    const go = ref(false);
     const selectedChatType = ref(null);
     const details_grp = ref(null);
-
     const chatIds = ref([]);
     const chats = reactive({});
     const selectedChat = ref(null);
@@ -71,153 +68,155 @@ export default {
     const newMessage = ref('');
     const users = reactive({});
     const currentUser = firebase.auth().currentUser;
+    const id_to_pass = ref("");
+    const comp_to_show = ref("");
 
-    const  id_to_pass=ref("");
-    const comp_to_show=ref("");
-    const change_cred = (comp,id)=>{
-      id_to_pass.value= id;
-      comp_to_show.value=comp;
-      console.log("here is id",id_to_pass.value,comp_to_show.value,comp_to_show==='binome');
+    const change_cred = (comp, id) => {
+      id_to_pass.value = id;
+      comp_to_show.value = comp;
+      console.log("here is id", id_to_pass.value, comp_to_show.value, comp_to_show === 'binome');
     };
-    
 
     const createNewChat = () => {
-      go.value = !(go.value);
-    };
+      go.value = !go.value;
+    };
 
-  
     watch(() => props.userData, (newVal) => {
       if (newVal) {
         console.log('userData is available', newVal);
       }
     }, { immediate: true });
+
     const reverseChatIds = computed(() => chatIds.value.slice().reverse());
 
-const selectChatType = async (type) => {
-  if (!props.userData || !props.userData.chats_binome || !props.userData.chats_group) {
-    console.error("userData is not available");
-    return;
-  }
+    const selectChatType = async (type) => {
+      if (!props.userData || !props.userData.chats_binome || !props.userData.chats_group) {
+        console.error("userData is not available");
+        return;
+      }
 
-  selectedChatType.value = type;
-  chatIds.value = type === 'solo' ? props.userData.chats_binome : props.userData.chats_group;
-  await fetchChats();
-};
-
-const fetchChats = async () => {
-  try {
-    for (const chatId of chatIds.value) {
-      const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
-      chatRef.onSnapshot(chatDoc => {
-        if (chatDoc.exists) {
-          chats[chatId] = { id: chatId, ...chatDoc.data() };
-        }
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching chats: ", error);
-  }
-};
-
-const getLastMessage_text = (chatId) => {
-  return chats[chatId] ? chats[chatId].last_message_text : null;
-};
-const getLastMessage_timestamp = (chatId) => {
-  const time = chats[chatId].last_message_timestamp;
-  const date = new Date(time);
-  const year = date.getFullYear();
-  const month = ('0' + (date.getMonth() + 1)).slice(-2);
-  const day = ('0' + date.getDate()).slice(-2);
-  const hours = ('0' + date.getHours()).slice(-2);
-  const minutes = ('0' + date.getMinutes()).slice(-2);
-  const seconds = ('0' + date.getSeconds()).slice(-2);
-
-  const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}` ;
-  return fullDateString;
-};
-const getLastMessage_user = (chatId) => {
-  return getUserName(chats[chatId].last_message_sender) || null;
-};
-
-const getMessages = (chatId) => {
-  const chat = chats[chatId];
-  if (chat && chat.list_mess) {
-    return chat.list_mess;
-  }
-  return null;
-};
-
-const selectChat = async (chatId) => {
-  const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
-  const chatDoc = await chatRef.get();
-  if (chatDoc.exists) {
-    selectedChat.value = { id: chatId, ...chatDoc.data() };
-    await fetchMessages(chatId);
-  }
-};
-
-const fetchMessages = async (chatId) => {
-  const messagesRef = projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${chatId}/list_mess`).orderBy('timestamp');
-  messagesRef.onSnapshot(snapshot => {
-    const sortedMessages = snapshot.docs.map(doc => {
-      const messageData = doc.data();
-      fetchUser(messageData.sender);
-      return { id: doc.id, ...messageData };
-    }).sort((b, a) => a.last_message_timestamp - b.last_message_timestamp);
-
-    messages.value = sortedMessages;
-  });
-};
-
-const fetchUser = async (userId) => {
-  if (!users[userId]) {
-    const userRef = projectFirestore.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    if (userDoc.exists) {
-      users[userId] = userDoc.data().user_name;
-    } else {
-      users[userId] = 'Unknown';
-    }
-  }
-};
-
-const getUserName = (userId) => {
-  if (!users[userId]) {
-    fetchUser(userId); // Fetch user data if not already fetched
-  }
-  return users[userId] || 'Fetching...';
-};
-
-const sendMessage = async () => {
-  if (newMessage.value.trim()) {
-    const message = {
-      sender: currentUser.uid,
-      text: newMessage.value,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      viewed: false
+      selectedChatType.value = type;
+      chatIds.value = type === 'solo' ? props.userData.chats_binome : props.userData.chats_group;
+      await fetchChats();
     };
-    await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${selectedChat.value.id}/list_mess`).add(message);
-    newMessage.value = '';
-  }
-};
 
-const getChatDisplayName = (chat) => {
-  if (!chat) return 'Unnamed Chat';
-  const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
-  return getUserName(otherUserId) || 'Unnamed Chat';
-};
+    const fetchChats = async () => {
+      try {
+        for (const chatId of chatIds.value) {
+          const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+          chatRef.onSnapshot(chatDoc => {
+            if (chatDoc.exists) {
+              chats[chatId] = { id: chatId, ...chatDoc.data() };
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching chats: ", error);
+      }
+    };
 
-const show_details_grp = (chatId) => {
-  details_grp.value = chatId;
-};
-const check_comp_to_show=(comp)=>{
-      return comp===comp_to_show.value;
-    }
-watch(() => props.userData, (newVal) => {
-  if (newVal) {
-    console.log('userData is available', newVal);
-  }
-}, { immediate: true });
+    const getLastMessage_text = (chatId) => {
+      return chats[chatId] ? chats[chatId].last_message_text : null;
+    };
+
+    const getLastMessage_timestamp = (chatId) => {
+      const time = chats[chatId].last_message_timestamp;
+      const date = new Date(time);
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      return fullDateString;
+    };
+
+    const getLastMessage_user = (chatId) => {
+      return getUserName(chats[chatId].last_message_sender) || null;
+    };
+
+    const getMessages = (chatId) => {
+      const chat = chats[chatId];
+      if (chat && chat.list_mess) {
+        return chat.list_mess;
+      }
+      return null;
+    };
+
+    const selectChat = async (chatId) => {
+      const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+      const chatDoc = await chatRef.get();
+      if (chatDoc.exists) {
+        selectedChat.value = { id: chatId, ...chatDoc.data() };
+        await fetchMessages(chatId);
+      }
+    };
+
+    const fetchMessages = async (chatId) => {
+      const messagesRef = projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${chatId}/list_mess`).orderBy('timestamp');
+      messagesRef.onSnapshot(snapshot => {
+        const sortedMessages = snapshot.docs.map(doc => {
+          const messageData = doc.data();
+          fetchUser(messageData.sender);
+          return { id: doc.id, ...messageData };
+        }).sort((b, a) => a.last_message_timestamp - b.last_message_timestamp);
+        messages.value = sortedMessages;
+      });
+    };
+
+    const fetchUser = async (userId) => {
+      if (!users[userId]) {
+        const userRef = projectFirestore.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          users[userId] = userDoc.data().user_name;
+        } else {
+          users[userId] = 'Unknown';
+        }
+      }
+    };
+
+    const getUserName = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId] || 'Fetching...';
+    };
+
+    const sendMessage = async () => {
+      if (newMessage.value.trim()) {
+        const message = {
+          sender: currentUser.uid,
+          text: newMessage.value,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          viewed: false
+        };
+        await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}`/`${selectedChat.value.id}`/list_mess).add(message);
+        newMessage.value = '';
+      }
+    };
+
+    const getChatDisplayName = (chat) => {
+      if (!chat) return 'Unnamed Chat';
+      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
+      return getUserName(otherUserId) || 'Unnamed Chat';
+    };
+
+    const show_details_grp = (chatId) => {
+      details_grp.value = chatId;
+    };
+
+    const check_comp_to_show = (comp) => {
+      return comp === comp_to_show.value;
+    };
+
+    watch(() => props.userData, (newVal) => {
+      if (newVal) {
+        console.log('userData is available', newVal);
+      }
+    }, { immediate: true });
+
     return {
       reverseChatIds,
       selectedChatType,
@@ -240,10 +239,11 @@ watch(() => props.userData, (newVal) => {
       getLastMessage_user,
       show_details_grp,
       details_grp,
-    
       change_cred,
       check_comp_to_show,
-      go
+      go,
+      id_to_pass,
+      comp_to_show
     };
   }
 };
@@ -343,44 +343,4 @@ button.active, button:hover {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
-
-/* CreateChat Component Styling */
-.create-chat {
-  margin-top: 20px;
-  width: 80%;
-  max-width: 600px;
-  padding: 10px 20px;
-  background-color: #fff; /* White background */
-  border: 1px solid #ccc; /* Light border */
-  border-radius: 24px; /* Rounded corners */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-  display: flex;
-  align-items: center;
-  z-index: 600; 
-}
-
-.create-chat input {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 24px;
-}
-
-.create-chat button {
-  border: none;
-  background-color: #007bff; /* Blue button */
-  color: #fff;
-  padding: 10px 20px;
-  margin-left: 10px;
-  border-radius: 24px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.create-chat button:hover {
-  background-color: #0056b3; /* Darker blue on hover */
-}
-
 </style>
