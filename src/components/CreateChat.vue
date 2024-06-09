@@ -1,12 +1,14 @@
 <template>
   <div class="create-chat-wrapper">
     <h3>Add a Conversation</h3>
-    <div>
+    <div class="chat-type-selector">
       <label>
-        <input type="radio" v-model="chatType" value="group" /> Group Chat
+        <input type="radio" v-model="chatType" value="group" />
+        <img src="group-chat-icon.svg" alt="Group Chat" class="chat-type-icon" />
       </label>
       <label>
-        <input type="radio" v-model="chatType" value="binome" /> Binome Chat
+        <input type="radio" v-model="chatType" value="binome" />
+        <img src="solo-chat-icon.svg" alt="Solo Chat" class="chat-type-icon" />
       </label>
     </div>
     <input
@@ -26,9 +28,9 @@
         <div>
           <p class="username">{{ user.user_name }}</p>
           <p class="email">{{ user.email }}</p>
-          <button @click="toggleUser(user)" class="toggle-user-button">
+          <button v-if="chatType === 'group'" @click="toggleUser(user)" class="toggle-user-button">
           {{ isUserSelected(user.id) ? '-' : '+' }}
-          </button>
+        </button>
         </div>
       </div>
     </div>
@@ -39,24 +41,32 @@
       class="message-input"
     />
     <div v-if="chatType === 'group' && selectedUsers.length > 0">
-      <ul>
-        Group name : 
-        <input
-      type="text"
-      v-model="group_name"
-      placeholder="Give The Group a name"
-    />
-      </ul>
+      <input
+        type="text"
+        v-model="group_name"
+        placeholder="Group name"
+        class="message-input"
+      />
       <h4>Selected Users for Group Chat</h4>
-      <ul>
-        <li v-for="user in selectedUsers" :key="user.id">{{ user.user_name }}</li>
-      </ul>
+      <div class="search-results">
+      <div
+        v-for="(user, index) in selectedUsers"
+        :key="user.id"
+        class="search-result-item"
+      >
+        <img :src="user.image" alt="Profile Picture" class="profile-picture" />
+        <div>
+          <p class="username">{{ user.user_name }}</p>
+          <p class="email">{{ user.email }}</p>
+        </div>
+      </div>
     </div>
     <div v-if="chatType === 'binome' && selectedUsers.length > 0">
       <h4>Selected User for Binome Chat</h4>
       <p>{{ selectedUsers[0].user_name }}</p>
     </div>
-    <button @click="submitChat" v-if="selectedUsers.length > 0">Submit</button>
+    <button @click="submitChat" v-if="selectedUsers.length > 0" class="submit-button">Submit</button>
+  </div>
   </div>
 </template>
 
@@ -255,7 +265,7 @@ export default {
 /* Chat type selector styles */
 .chat-type-selector {
   display: flex;
-  gap: 10px;
+  gap: 20px;
   margin-bottom: 15px;
 }
 
@@ -263,12 +273,12 @@ export default {
   display: flex;
   align-items: center;
   cursor: pointer;
-  font-size: 1rem;
-  color: #b0b0b0;
 }
 
-.chat-type-selector input[type="radio"] {
-  margin-right: 5px;
+.chat-type-icon {
+  width: 40px;
+  height: 40px;
+  filter: grayscale(100%);
 }
 
 /* Search bar styles */
