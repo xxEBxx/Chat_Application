@@ -14,9 +14,10 @@
       </div>
       <div v-if="selectedChatType !== 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in chatIds" :key="chatId" class="chat-item" >
+        <div v-for="chatId in chatIds" :key="chatId" class="chat-item">
           <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
-          <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+          <p v-if="getLastMessage_text(chatId)" @click="show_details_grp(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+          <Chat_details_group v-if="details_grp === chatId" :chat="chats[chatId]" />
         </div>
       </div>
     </div>
@@ -27,9 +28,11 @@
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
 import { reactive, ref, watch } from 'vue';
+import Chat_details_group from './Chat_details_group.vue';
 
 export default {
   name: 'Home',
+  components: { Chat_details_group },
   props: {
     userData: {
       type: Object,
@@ -39,6 +42,8 @@ export default {
   },
   setup(props) {
     const selectedChatType = ref(null);
+    const details_grp = ref(null);
+
     const chatIds = ref([]);
     const chats = reactive({});
     const selectedChat = ref(null);
@@ -59,26 +64,25 @@ export default {
     };
 
     const fetchChats = async () => {
-  try {
-    for (const chatId of chatIds.value) {
-      const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
-      chatRef.onSnapshot(chatDoc => {
-        if (chatDoc.exists) {
-          chats[chatId] = { id: chatId, ...chatDoc.data() };
+      try {
+        for (const chatId of chatIds.value) {
+          const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+          chatRef.onSnapshot(chatDoc => {
+            if (chatDoc.exists) {
+              chats[chatId] = { id: chatId, ...chatDoc.data() };
+            }
+          });
         }
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching chats: ", error);
-  }
-};
-
+      } catch (error) {
+        console.error("Error fetching chats: ", error);
+      }
+    };
 
     const getLastMessage_text = (chatId) => {
       return chats[chatId] ? chats[chatId].last_message_text : null;
     };
     const getLastMessage_timestamp = (chatId) => {
-      const time =chats[chatId].last_message_timestamp ;
+      const time = chats[chatId].last_message_timestamp;
       const date = new Date(time);
       const year = date.getFullYear();
       const month = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -88,10 +92,10 @@ export default {
       const seconds = ('0' + date.getSeconds()).slice(-2);
 
       const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      return fullDateString
+      return fullDateString;
     };
     const getLastMessage_user = (chatId) => {
-      return getUserName(chats[chatId].last_message_sender)||null;
+      return getUserName(chats[chatId].last_message_sender) || null;
     };
 
     const getMessages = (chatId) => {
@@ -160,6 +164,10 @@ export default {
       return getUserName(otherUserId) || 'Unnamed Chat';
     };
 
+    const show_details_grp = (chatId) => {
+      details_grp.value = chatId;
+    };
+
     watch(() => props.userData, (newVal) => {
       if (newVal) {
         console.log('userData is available', newVal);
@@ -183,11 +191,14 @@ export default {
       getLastMessage_text,
       getLastMessage_timestamp,
       getChatDisplayName,
-      getLastMessage_user
+      getLastMessage_user,
+      show_details_grp,
+      details_grp
     };
   }
 };
 </script>
+
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
