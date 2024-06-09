@@ -4,15 +4,11 @@
     <div class="chat-type-selector">
       <label>
         <input type="radio" v-model="chatType" value="group" />
-        <svg class="bi" width="32" height="32" fill="currentColor">
-          <use xlink:href="~/bootstrap-icons/bootstrap-icons.svg#people"/>
-        </svg>      
+        <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>    
       </label>
       <label>
         <input type="radio" v-model="chatType" value="binome" />
-        <svg class="bi" width="32" height="32" fill="currentColor">
-          <use xlink:href="~/bootstrap-icons/bootstrap-icons.svg#person"/>
-        </svg>      
+        <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>    
       </label>
     </div>
     <input

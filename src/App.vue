@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.3/font/bootstrap-icons.css">  <div id="app">
     <router-view/>
   </div>
 </template>
