@@ -7,14 +7,14 @@
     <div v-if="selectedChatType" class="chat-container">
       <div v-if="selectedChatType === 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in chatIds" :key="chatId" class="chat-item">
+        <div v-for="chatId in sortedChatIds" :key="chatId" class="chat-item">
           <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
           <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}  {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
         </div>
       </div>
       <div v-if="selectedChatType !== 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in chatIds" :key="chatId" class="chat-item">
+        <div v-for="chatId in sortedChatIds" :key="chatId" class="chat-item">
           <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
           <p v-if="getLastMessage_text(chatId)" @click="show_details_grp(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
           <Chat_details_group v-if="details_grp === chatId" :chat="chats[chatId]" />
@@ -27,7 +27,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, watch } from 'vue';
+import { reactive, ref, computed, watch } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
 
 export default {
@@ -70,6 +70,7 @@ export default {
           chatRef.onSnapshot(chatDoc => {
             if (chatDoc.exists) {
               chats[chatId] = { id: chatId, ...chatDoc.data() };
+              sortChats();
             }
           });
         }
@@ -78,11 +79,30 @@ export default {
       }
     };
 
+    const sortChats = () => {
+      chatIds.value.sort((a, b) => {
+        const timeA = chats[a]?.last_message_timestamp?.toMillis?.() || 0;
+        const timeB = chats[b]?.last_message_timestamp?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+    };
+
+    const sortedChatIds = computed(() => {
+      return chatIds.value.slice().sort((a, b) => {
+        const timeA = chats[a]?.last_message_timestamp?.toMillis?.() || 0;
+        const timeB = chats[b]?.last_message_timestamp?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+    });
+
     const getLastMessage_text = (chatId) => {
       return chats[chatId] ? chats[chatId].last_message_text : null;
     };
+
     const getLastMessage_timestamp = (chatId) => {
-      const time = chats[chatId].last_message_timestamp;
+      const time = chats[chatId]?.last_message_timestamp?.toMillis?.();
+      if (!time) return null;
+
       const date = new Date(time);
       const year = date.getFullYear();
       const month = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -94,8 +114,9 @@ export default {
       const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       return fullDateString;
     };
+
     const getLastMessage_user = (chatId) => {
-      return getUserName(chats[chatId].last_message_sender) || null;
+      return getUserName(chats[chatId]?.last_message_sender) || null;
     };
 
     const getMessages = (chatId) => {
@@ -193,7 +214,8 @@ export default {
       getChatDisplayName,
       getLastMessage_user,
       show_details_grp,
-      details_grp
+      details_grp,
+      sortedChatIds
     };
   }
 };
