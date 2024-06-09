@@ -6,7 +6,6 @@
         <p @click="goto_home" :class="{ 'active': !go }">Home</p>
       </nav>
     </div>      
-    <CreateChat v-if="!go" class="create-chat"/>
     <div class="main-container">
       <profile v-if="go"/>
       <chat v-else :user-data="userData" />
@@ -132,7 +131,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
   display: flex;
   align-items: center;
-  z-index: 600; /*Z INDEX*/ 
+  z-index: 600; 
 }
 
 .create-chat input {
@@ -172,7 +171,6 @@ export default {
     padding: 8px;
   }
   .create-chat button {
-    padding: 8px 16px;
-  }
+    padding: 8px 16px;}
 }
 </style>
