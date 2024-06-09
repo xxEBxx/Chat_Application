@@ -24,6 +24,13 @@
         </button>
       </li>
     </ul>
+    <ul>
+      <input
+      type="text"
+      v-model="text_to_send"
+      placeholder="Enter first message"
+    />
+    </ul>
     <div v-if="chatType === 'group' && selectedUsers.length > 0">
       <h4>Selected Users for Group Chat</h4>
       <ul>
