@@ -8,19 +8,26 @@
       <div v-if="selectedChatType === 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
         <div v-for="chatId in sortedChatIds" :key="chatId" class="chat-item">
-          <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
-          <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}  {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+
+          <div @click="change_cred('binome',chatId)">
+            <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
+            <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}  {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+          </div>
+
         </div>
       </div>
       <div v-if="selectedChatType !== 'solo'">
         <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in sortedChatIds" :key="chatId" class="chat-item">
-          <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
-          <p v-if="getLastMessage_text(chatId)" @click="show_details_grp(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
-          <Chat_details_group v-if="details_grp === chatId" :chat="chats[chatId]" />
+        <div v-for="chatId in sortedChatIds" :key="chatId" class="chat-item" >
+          <div @click="change_cred('group',chatId)">
+            <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
+            <p v-if="getLastMessage_text(chatId)" @click="show_details_grp(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+          </div>
         </div>
       </div>
     </div>
+    <Chat_details_binome v-if="check_comp_to_show('binome')" :id="id_to_pass"/>
+    <Chat_details_group v-if="check_comp_to_show('group')" :id="id_to_pass"/>
   </div>
 </template>
 
@@ -29,10 +36,14 @@ import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
 import { reactive, ref, computed, watch } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
+import Chat_details_binome from './Chat_details_binome.vue';
 
 export default {
   name: 'Home',
-  components: { Chat_details_group },
+  components: { 
+    Chat_details_group,
+    Chat_details_binome
+  },
   props: {
     userData: {
       type: Object,
@@ -114,7 +125,13 @@ export default {
       const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       return fullDateString;
     };
-
+    const  id_to_pass=ref("");
+    const comp_to_show=ref("");
+    const change_cred = (comp,id)=>{
+      id_to_pass.value= id;
+      comp_to_show.value=comp;
+      console.log("here is id",id_to_pass.value,comp_to_show.value,comp_to_show==='binome');
+    };
     const getLastMessage_user = (chatId) => {
       return getUserName(chats[chatId]?.last_message_sender) || null;
     };
@@ -184,7 +201,9 @@ export default {
       const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
       return getUserName(otherUserId) || 'Unnamed Chat';
     };
-
+    const check_comp_to_show=(comp)=>{
+      return comp===comp_to_show.value;
+    }
     const show_details_grp = (chatId) => {
       details_grp.value = chatId;
     };
@@ -215,7 +234,9 @@ export default {
       getLastMessage_user,
       show_details_grp,
       details_grp,
-      sortedChatIds
+      sortedChatIds,
+      change_cred,
+      check_comp_to_show
     };
   }
 };
