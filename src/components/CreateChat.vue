@@ -32,6 +32,14 @@
     />
     </ul>
     <div v-if="chatType === 'group' && selectedUsers.length > 0">
+      <ul>
+        Group name : 
+        <input
+      type="text"
+      v-model="group_name"
+      placeholder="Give The Group a name"
+    />
+      </ul>
       <h4>Selected Users for Group Chat</h4>
       <ul>
         <li v-for="user in selectedUsers" :key="user.id">{{ user.user_name }}</li>
@@ -58,7 +66,7 @@ export default {
       filteredUsers: [],
       selectedUsers: [],
       chatType: 'group', 
-      groupName: '', 
+      group_name: '', 
       text_to_send:''
     };
   },
@@ -113,7 +121,7 @@ export default {
       console.log('Creating group chat with name:', this.groupName, 'and users:', this.selectedUsers);
 
       const groupChatRef = await projectFirestore.collection('messages_group').add({
-        group_name: this.groupName,
+        group_name: this.group_name,
         members: [...this.selectedUsers.map(user => user.id), creatorId],
         created_at: Date.now(),
         creator_id: creatorId,
