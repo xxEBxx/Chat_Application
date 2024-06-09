@@ -143,12 +143,10 @@ export default {
         members: [...this.selectedUsers.map(user => user.id), creatorId],
         created_at: Date.now(),
         creator_id: creatorId,
-        last_message: {
-          sender: creatorId,
-          text: this.text_to_send,
-          timestamp: Date.now(),
-          viewed_by: [],
-        },
+        last_message_sender: creatorId,
+        last_message_text: this.text_to_send,
+        last_message_timestamp: Date.now(),
+        last_message_viewed_by: [],
         messages: [{
           sender: creatorId,
           text: this.text_to_send,
@@ -191,12 +189,10 @@ export default {
           const binomeChatRef = await projectFirestore.collection('messages_binome').add({
             creator_id: creatorId,
             other_id: otherUser,
-            last_message: {
-              sender: creatorId,
-              text: this.text_to_send,
-              timestamp: Date.now(),
-              viewed: false
-            },
+            last_message_sender: creatorId,
+            last_message_text: this.text_to_send,
+            last_message_timestamp: Date.now(),
+            last_message_viewed: false,
             list_mess:[{
               sender: creatorId,
               text: this.text_to_send,
