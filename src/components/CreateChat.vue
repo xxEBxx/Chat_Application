@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="create-chat-wrapper">
     <h3>Add a Conversation</h3>
     <div>
       <label>
@@ -14,23 +14,30 @@
       v-model="searchTerm"
       @input="searchUsers"
       placeholder="Search users by username..."
+      class="search-input"
     />
-    <ul>
-      <li v-for="user in filteredUsers" :key="user.id">
-        <p class="username">{{ user.user_name }}</p>
-        <p class="email">{{ user.email }}</p>
-        <button @click="toggleUser(user)">
-          {{ isUserSelected(user.id) ? 'Remove from' : 'Add to' }} {{ chatType === 'group' ? 'Group' : 'Binome' }} Chat
-        </button>
-      </li>
-    </ul>
-    <ul>
-      <input
+    <div class="search-results" v-if="filteredUsers.length">
+      <div
+        v-for="(user, index) in filteredUsers.slice(0, 3)"
+        :key="user.id"
+        class="search-result-item"
+      >
+        <img :src="user.image" alt="Profile Picture" class="profile-picture" />
+        <div>
+          <p class="username">{{ user.user_name }}</p>
+          <p class="email">{{ user.email }}</p>
+          <button @click="toggleUser(user)" class="toggle-user-button">
+          {{ isUserSelected(user.id) ? '-' : '+' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <input
       type="text"
       v-model="text_to_send"
       placeholder="Enter first message"
+      class="message-input"
     />
-    </ul>
     <div v-if="chatType === 'group' && selectedUsers.length > 0">
       <ul>
         Group name : 
@@ -52,6 +59,7 @@
     <button @click="submitChat" v-if="selectedUsers.length > 0">Submit</button>
   </div>
 </template>
+
 
 <script>
 import { projectFirestore } from '../firebase/config';
@@ -118,7 +126,7 @@ export default {
     const creatorId = getUser().uid;
 
     if (this.chatType === 'group') {
-      console.log('Creating group chat with name:', this.groupName, 'and users:', this.selectedUsers);
+      console.log('Creating group chat with name:', this.group_name, 'and users:', this.selectedUsers);
 
       const groupChatRef = await projectFirestore.collection('messages_group').add({
         group_name: this.group_name,
@@ -208,7 +216,7 @@ export default {
         }
         // Clear the selection after submission
         this.selectedUsers = [];
-        this.groupName = '';
+        this.group_name = '';
       } catch (error) {
         console.error('Error submitting chat:', error);
       }
@@ -221,12 +229,13 @@ export default {
 /* Wrapper for the entire component */
 .create-chat-wrapper {
   padding: 20px;
-  background-color: #f9f9f9;
+  background-color: #2c2c2c;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin: 20px;
-  max-width: 600px;
-  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
 }
 
 /* Header styles */
@@ -240,13 +249,14 @@ export default {
 .header h3 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: #e0e0e0;
 }
 
 /* Chat type selector styles */
 .chat-type-selector {
   display: flex;
   gap: 10px;
+  margin-bottom: 15px;
 }
 
 .chat-type-selector label {
@@ -254,22 +264,61 @@ export default {
   align-items: center;
   cursor: pointer;
   font-size: 1rem;
-  color: #555;
+  color: #b0b0b0;
+}
+
+.chat-type-selector input[type="radio"] {
+  margin-right: 5px;
 }
 
 /* Search bar styles */
-.search-bar {
-  margin-bottom: 15px;
-}
-
-.search-bar input[type="text"] {
+.search-input {
   width: 100%;
   padding: 10px;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid #444;
   border-radius: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   outline: none;
+  margin-bottom: 15px;
+}
+
+/* Search results styles */
+.search-results {
+  background-color: #3c3c3c;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  margin-bottom: 15px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.username {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.email {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  margin: 0;
 }
 
 /* User list styles */
@@ -284,7 +333,10 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #444;
+  background-color: #3c3c3c;
+  margin-bottom: 5px;
+  border-radius: 4px;
 }
 
 .user-info {
@@ -292,46 +344,50 @@ export default {
   flex-direction: column;
 }
 
-.username {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin: 0;
-}
-
-.email {
-  font-size: 0.9rem;
-  color: #555;
-  margin: 0;
-}
-
 .toggle-user-button {
-  background-color: #007bff;
-  color: #fff;
+  background-color: #555;
+  color: #e0e0e0;
   border: none;
   padding: 8px 12px;
   border-radius: 24px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .toggle-user-button:hover {
-  background-color: #0056b3;
+  background-color: #777;
+}
+
+/* Message input styles */
+.message-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #444;
+  border-radius: 24px;
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  outline: none;
+  margin-top: 15px;
 }
 
 /* Selected users section styles */
 .selected-users {
   margin-top: 20px;
   padding: 10px;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  background-color: #3c3c3c;
+  border: 1px solid #444;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .selected-users h4 {
   margin: 0 0 10px 0;
   font-size: 1.2rem;
-  color: #333;
+  color: #e0e0e0;
 }
 
 /* Submit button styles */
@@ -339,8 +395,8 @@ export default {
   display: block;
   width: 100%;
   padding: 10px;
-  background-color: #28a745;
-  color: #fff;
+  background-color: #555;
+  color: #e0e0e0;
   border: none;
   border-radius: 24px;
   cursor: pointer;
@@ -350,6 +406,6 @@ export default {
 }
 
 .submit-button:hover {
-  background-color: #218838;
+  background-color: #777;
 }
 </style>
