@@ -16,7 +16,7 @@
   </template>
   
   <script>
-    import {auth} from '@/firebase/config.js'
+    import {auth,projectFirestore} from '@/firebase/config.js'
     import { getUser,setUser } from './UserState';
 
   export default {
@@ -38,20 +38,23 @@
           }
         })
 },
-      async login() {
-        try {
-          
-            
-            const userCredential=await auth.signInWithEmailAndPassword(this.email, this.password);
-            this.user = userCredential.user;
-            console.log(`User ID: ${this.user.uid}`);
-            setUser(this.user);
-           
-            this.$router.push('/whatsappHome'); 
-        } catch (error) {
-            alert(`Login failed: ${error.message}`);
-        }
+async login() {
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(this.email, this.password);
+        this.user = userCredential.user;
+        console.log(`User ID: ${this.user.uid}`);
+        setUser(this.user);
+        
+        await projectFirestore.collection('users').doc(this.user.uid).update({
+            connected: true
+        });
+
+        this.$router.push('/whatsappHome'); 
+    } catch (error) {
+        alert(`Login failed: ${error.message}`);
+    }
 }
+
 
     }
   }

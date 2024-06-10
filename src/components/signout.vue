@@ -7,25 +7,33 @@
   </template>
   
   <script>
-  import { auth } from '@/firebase/config.js';
-  
+  import { auth, projectFirestore } from '@/firebase/config.js';
+
   export default {
     name: 'SignOut',
     methods: {
       async signOut() {
         try {
+          const user = auth.currentUser;
+          if (user) {
+            const userId = user.uid;
+            await projectFirestore.collection('users').doc(userId).update({
+              connected: false
+            });
+          }
           await auth.signOut();
           this.$router.push('/'); // Redirect to Home or any other page
         } catch (error) {
           console.error('Error signing out:', error.message);
         }
       },
-      cancel(){
-        this.$router.push('/WhatsappHome')
+      cancel() {
+        this.$router.push('/WhatsappHome');
       }
     }
   };
-  </script>
+</script>
+
   
   <style scoped>
   .signout-container {
