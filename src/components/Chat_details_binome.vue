@@ -198,7 +198,9 @@ export default {
 
     const scrollToBottom = () => {
       const chatDetails = document.querySelector('.chat-details');
-      chatDetails.scrollTop = chatDetails.scrollHeight;
+      if (chatDetails) {
+        chatDetails.scrollTop = chatDetails.scrollHeight;
+      }
     };
 
     onMounted(async () => {
@@ -298,5 +300,28 @@ export default {
 
 .viewed {
   color: rgba(71, 190, 253, 0.842);
+}
+
+.message-item.sent .message-header {
+  justify-content: flex-end;
+}
+
+.message-item.sent .profile-picture {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.message-item p {
+  margin: 5px 0;
+}
+
+.message-item small {
+  display: block;
+  margin-top: 5px;
+  color: #888;
+}
+
+.message-item.sent small {
+  text-align: right;
 }
 </style>

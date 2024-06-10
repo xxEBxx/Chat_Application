@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-details">
+  <div class="chat-details" @scroll="handleScroll" ref="chatContainer">
     <h2>{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <div v-if="message.sender !== currentUser.uid" class="message-header">
@@ -22,7 +22,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted, watch } from 'vue';
+import { reactive, ref, onMounted, watch, nextTick } from 'vue';
 
 export default {
   name: 'ChatDetailsGrp',
@@ -39,7 +39,11 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('');
+    const chatContainer = ref(null);
     let unsubscribe = null;
+    const pageSize = 20; // Number of messages to load per page
+    const lastVisible = ref(null);
+    const loadingMore = ref(false);
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -50,6 +54,31 @@ export default {
         await fetchUsers(chat.value.members);
       } else {
         console.error(`No chat found with id: ${props.id}`);
+      }
+    };
+
+    const loadMessages = async (initialLoad = false) => {
+      if (loadingMore.value) return;
+      loadingMore.value = true;
+
+      let query = projectFirestore.collection('messages_group').doc(props.id).collection('messages').orderBy('timestamp', 'desc').limit(pageSize);
+
+      if (!initialLoad && lastVisible.value) {
+        query = query.startAfter(lastVisible.value);
+      }
+
+      const snapshot = await query.get();
+      if (!snapshot.empty) {
+        lastVisible.value = snapshot.docs[snapshot.docs.length - 1];
+        const newMessages = snapshot.docs.map(doc => doc.data());
+        messages.value = initialLoad ? newMessages.reverse() : [...newMessages.reverse(), ...messages.value];
+      }
+
+      loadingMore.value = false;
+
+      if (initialLoad) {
+        await nextTick();
+        scrollToBottom();
       }
     };
 
@@ -80,6 +109,9 @@ export default {
           }
 
           messages.value = updatedMessages;
+
+          await nextTick();
+          scrollToBottom();
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
@@ -136,6 +168,9 @@ export default {
             list_mess: currentMessages
           });
           newMessage.value = '';
+
+          await nextTick();
+          scrollToBottom();
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
@@ -158,13 +193,28 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
+    const handleScroll = async (event) => {
+      const { scrollTop } = event.target;
+      if (scrollTop === 0 && !loadingMore.value) {
+        await loadMessages();
+      }
+    };
+
+    const scrollToBottom = () => {
+      if (chatContainer.value) {
+        chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+      }
+    };
+
     onMounted(async () => {
       await fetchChatDetails();
+      await loadMessages(true);
       subscribeToMessages();
     });
 
     watch(() => props.id, async (newId) => {
       await fetchChatDetails();
+      await loadMessages(true);
       subscribeToMessages();
     });
 
@@ -178,12 +228,14 @@ export default {
       formatTimestamp,
       isMessageFullyViewed,
       currentUser,
-      chatTitle
+      chatTitle,
+      handleScroll,
+      scrollToBottom,
+      chatContainer
     };
   }
 };
 </script>
-
 
 
 <style scoped>
