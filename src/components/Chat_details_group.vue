@@ -249,4 +249,7 @@ export default {
 .send-button:hover {
   background-color: #0056b3;
 }
+.viewed {
+  color: rgba(71, 190, 253, 0.842);
+}
 </style>

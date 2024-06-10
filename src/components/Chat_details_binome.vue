@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-details">
+  <div class="chat-details" @scroll="handleScroll">
     <h2>{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <div v-if="message.sender !== currentUser.uid" class="message-header">
@@ -22,7 +22,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted, watch } from 'vue';
+import { reactive, ref, onMounted, watch, nextTick } from 'vue';
 
 export default {
   name: 'Chat_detail_binome',
@@ -40,6 +40,9 @@ export default {
     const chat = ref({});
     const chatTitle = ref('Loading...');
     let unsubscribe = null;
+    const pageSize = 20; // Number of messages to load per page
+    const lastVisible = ref(null);
+    const loadingMore = ref(false);
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
@@ -50,7 +53,32 @@ export default {
         await fetchUser(otherUserId);
         chatTitle.value = users[otherUserId]?.user_name || 'Unknown User';
       } else {
-        console.error(`No chat found with id: ${props.id}`);
+        //console.error(No chat found with id: ${props.id});
+      }
+    };
+
+    const loadMessages = async (initialLoad = false) => {
+      if (loadingMore.value) return;
+      loadingMore.value = true;
+
+      let query = projectFirestore.collection('messages_binome').doc(props.id).collection('messages').orderBy('timestamp', 'desc').limit(pageSize);
+
+      if (!initialLoad && lastVisible.value) {
+        query = query.startAfter(lastVisible.value);
+      }
+
+      const snapshot = await query.get();
+      if (!snapshot.empty) {
+        lastVisible.value = snapshot.docs[snapshot.docs.length - 1];
+        const newMessages = snapshot.docs.map(doc => doc.data());
+        messages.value = initialLoad ? newMessages.reverse() : [...newMessages.reverse(), ...messages.value];
+      }
+
+      loadingMore.value = false;
+
+      if (initialLoad) {
+        await nextTick();
+        scrollToBottom();
       }
     };
 
@@ -78,8 +106,11 @@ export default {
           }
 
           messages.value = updatedMessages;
+
+          await nextTick();
+          scrollToBottom();
         } else {
-          console.error(`No chat found with id: ${props.id}`);
+          //console.error(No chat found with id: ${props.id});
         }
       });
     };
@@ -137,8 +168,11 @@ export default {
             list_mess: currentMessages
           });
           newMessage.value = '';
+
+          await nextTick();
+          scrollToBottom();
         } else {
-          console.error(`No chat found with id: ${props.id}`);
+          //console.error(No chat found with id: ${props.id});
         }
       }
     };
@@ -155,13 +189,27 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
+    const handleScroll = async (event) => {
+      const { scrollTop, clientHeight, scrollHeight } = event.target;
+      if (scrollTop === 0 && !loadingMore.value) {
+        await loadMessages();
+      }
+    };
+
+    const scrollToBottom = () => {
+      const chatDetails = document.querySelector('.chat-details');
+      chatDetails.scrollTop = chatDetails.scrollHeight;
+    };
+
     onMounted(async () => {
       await fetchChatDetails();
+      await loadMessages(true);
       subscribeToMessages();
     });
 
     watch(() => props.id, async (newId) => {
       await fetchChatDetails();
+      await loadMessages(true);
       subscribeToMessages();
     });
 
@@ -174,7 +222,9 @@ export default {
       sendMessage,
       formatTimestamp,
       currentUser,
-      chatTitle
+      chatTitle,
+      handleScroll,
+      scrollToBottom
     };
   }
 };
@@ -183,6 +233,8 @@ export default {
 <style scoped>
 .chat-details {
   margin-top: 20px;
+  height: 500px; /* Adjust as needed */
+  overflow-y: auto;
 }
 
 .message-item {
