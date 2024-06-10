@@ -9,7 +9,7 @@
     </div>
     
     <div class="container">
-      <div v-if="selectedChatType" class="chat-container">
+      <div class="chat-list">
         <div v-if="selectedChatType === 'solo'">
           <h2>Solo Chats</h2>
           <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
@@ -33,7 +33,8 @@
           </div>
         </div>
       </div>
-      <div>
+      
+      <div class="chat-details">
         <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
         <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
       </div>
@@ -314,11 +315,24 @@ button.active, button:hover {
   transform: scale(1.05);
 }
 
-.chat-container {
-  width: 80%;
-  max-width: 600px;
-  text-align: left;
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
   margin-top: 120px; /* Adjusted for button container */
+}
+
+.chat-list {
+  margin:0;
+  width: 30%;
+  height:100%;
+  text-align: left;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+  background-color: #f9f9f9;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .chat-item {
@@ -328,23 +342,32 @@ button.active, button:hover {
   margin: 10px 0;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  background-color: white;
 }
 
 .chat-item:hover {
   background-color: #f1f1f1;
 }
 
-.messages-container {
-  margin-top: 20px;
+.chat-details {
+  height:100%;
+  width: 70%;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .message-item {
+  display: flex;
+  flex-direction: column;
   padding: 10px;
   margin: 10px 0;
   border-radius: 10px;
   background-color: #e1ffc7;
   max-width: 80%;
   text-align: left;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
 }
 
 .message-item p {
@@ -357,10 +380,26 @@ button.active, button:hover {
   text-align: right;
 }
 
-.message-input {
-  width: calc(100% - 20px);
-  padding: 10px;
+.message-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.input-container {
+  display: flex;
   margin-top: 10px;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 5px;
   outline: none;
@@ -371,7 +410,33 @@ button.active, button:hover {
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 
+.send-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
 .create-chat-link {
   text-decoration: none;
+}
+
+h2 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+h3 {
+  color: #555;
+  font-size: 20px;
+  margin-bottom: 5px;
 }
 </style>

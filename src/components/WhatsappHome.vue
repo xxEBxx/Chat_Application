@@ -127,6 +127,7 @@ export default {
 
 /* Main Container Adjustments */
 #app {
+  width:100%;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #333; /* Darker gray for primary text */
@@ -136,7 +137,9 @@ export default {
   align-items: center;
   background-color: #f5f5f5; /* Light gray background */
 }
-
+.main-container{
+  width:100%
+}
 /* Additional styles for responsiveness */
 @media screen and (max-width: 600px) {
   .navbar p {
