@@ -4,7 +4,9 @@
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <p><strong>{{ getUserName(message.sender) }}:</strong> {{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
-      <small v-if="currentUser.uid === message.sender">{{ message.viewed }}</small>
+      <small v-if="currentUser.uid === message.sender"><small v-if="currentUser.uid === message.sender">
+        <i :class="message.viewed ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
+      </small></small>
     </div>
     <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
   </div>
@@ -187,5 +189,8 @@ export default {
 .message-input:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+.viewed {
+  color: rgba(71, 190, 253, 0.842);
 }
 </style>
