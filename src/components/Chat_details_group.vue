@@ -22,7 +22,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted, watch, nextTick } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 
 export default {
   name: 'ChatDetailsGrp',
@@ -39,11 +39,7 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('');
-    const chatContainer = ref(null);
     let unsubscribe = null;
-    const pageSize = 20; // Number of messages to load per page
-    const lastVisible = ref(null);
-    const loadingMore = ref(false);
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -57,61 +53,13 @@ export default {
       }
     };
 
-    const loadMessages = async (initialLoad = false) => {
-      if (loadingMore.value) return;
-      loadingMore.value = true;
-
-      let query = projectFirestore.collection('messages_group').doc(props.id).collection('messages').orderBy('timestamp', 'desc').limit(pageSize);
-
-      if (!initialLoad && lastVisible.value) {
-        query = query.startAfter(lastVisible.value);
-      }
-
-      const snapshot = await query.get();
-      if (!snapshot.empty) {
-        lastVisible.value = snapshot.docs[snapshot.docs.length - 1];
-        const newMessages = snapshot.docs.map(doc => doc.data());
-        messages.value = initialLoad ? newMessages.reverse() : [...newMessages.reverse(), ...messages.value];
-      }
-
-      loadingMore.value = false;
-
-      if (initialLoad) {
-        await nextTick();
-        scrollToBottom();
-      }
-    };
-
     const subscribeToMessages = () => {
       if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
-      unsubscribe = chatRef.onSnapshot(async chatDoc => {
+      unsubscribe = chatRef.onSnapshot(chatDoc => {
         if (chatDoc.exists) {
-          const messagesList = chatDoc.data().list_mess || [];
-          const updatedMessages = [];
-          const batch = projectFirestore.batch();
-          let needToUpdate = false;
-
-          for (const message of messagesList) {
-            await fetchUser(message.sender);
-            if (!message.viewed_by) {
-              message.viewed_by = [];
-            }
-            if (!message.viewed_by.includes(currentUser.uid)) {
-              message.viewed_by.push(currentUser.uid);
-              needToUpdate = true;
-            }
-            updatedMessages.push(message);
-          }
-
-          if (needToUpdate) {
-            await chatRef.update({ list_mess: updatedMessages });
-          }
-
-          messages.value = updatedMessages;
-
-          await nextTick();
-          scrollToBottom();
+          messages.value = chatDoc.data().list_mess || [];
+          messages.value.forEach(message => fetchUser(message.sender));
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
@@ -147,39 +95,51 @@ export default {
       return users[userId]?.image || '';
     };
 
-    const sendMessage = async () => {
-      if (newMessage.value.trim()) {
-        const message = {
-          sender: currentUser.uid,
-          text: newMessage.value,
-          timestamp: Date.now(),
-          viewed_by: []
-        };
-        const chatRef = projectFirestore.collection('messages_group').doc(props.id);
-        const chatDoc = await chatRef.get();
-        if (chatDoc.exists) {
-          const currentMessages = chatDoc.data().list_mess || [];
-          currentMessages.push(message);
-          await chatRef.update({
-            last_message_sender: currentUser.uid,
-            last_message_text: newMessage.value,
-            last_message_timestamp: Date.now(),
-            last_message_viewed: false,
-            list_mess: currentMessages
-          });
-          newMessage.value = '';
+    const addNotification = async (userId, messageText, groupName) => {
+  const userRef = projectFirestore.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+  if (userDoc.exists) {
+    const notifications = userDoc.data().notifications || [];
+    notifications.push({ status: 'unread', username:groupName ,text: messageText, timestamp: Date.now() });
+    await userRef.update({ notifications });
+  } else {
+    console.error(`No user found with id: ${userId}`);
+  }
+};
 
-          await nextTick();
-          scrollToBottom();
-        } else {
-          console.error(`No chat found with id: ${props.id}`);
-        }
+const sendMessage = async () => {
+  if (newMessage.value.trim()) {
+    const message = {
+      sender: currentUser.uid,
+      text: newMessage.value,
+      timestamp: Date.now(),
+      viewed: false
+    };
+    const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+    const chatDoc = await chatRef.get();
+    if (chatDoc.exists) {
+      const currentMessages = chatDoc.data().list_mess || [];
+      currentMessages.push(message);
+      await chatRef.update({
+        last_message_sender: currentUser.uid,
+        last_message_text: newMessage.value,
+        last_message_timestamp: Date.now(),
+        last_message_viewed: false,
+        list_mess: currentMessages
+      });
+
+      const groupMembers = chat.value.members.filter(member => member !== currentUser.uid);
+      for (const memberId of groupMembers) {
+        await addNotification(memberId, message.text, chatTitle.value);
       }
-    };
 
-    const isMessageFullyViewed = (message) => {
-      return message.viewed_by.length === chat.value.members.length ;
-    };
+      newMessage.value = '';
+    } else {
+      console.error(`No chat found with id: ${props.id}`);
+    }
+  }
+};
+
 
     const formatTimestamp = (timestamp) => {
       if (!timestamp) return 'Loading...';
@@ -193,28 +153,18 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
-    const handleScroll = async (event) => {
-      const { scrollTop } = event.target;
-      if (scrollTop === 0 && !loadingMore.value) {
-        await loadMessages();
-      }
-    };
-
-    const scrollToBottom = () => {
-      if (chatContainer.value) {
-        chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
-      }
+    const isMessageFullyViewed = (message) => {
+      // Logic to determine if a message is fully viewed
+      return message.viewed;
     };
 
     onMounted(async () => {
       await fetchChatDetails();
-      await loadMessages(true);
       subscribeToMessages();
     });
 
     watch(() => props.id, async (newId) => {
       await fetchChatDetails();
-      await loadMessages(true);
       subscribeToMessages();
     });
 
@@ -228,15 +178,11 @@ export default {
       formatTimestamp,
       isMessageFullyViewed,
       currentUser,
-      chatTitle,
-      handleScroll,
-      scrollToBottom,
-      chatContainer
+      chatTitle
     };
   }
 };
 </script>
-
 
 <style scoped>
 .chat-details {
@@ -302,6 +248,7 @@ export default {
 .send-button:hover {
   background-color: #0056b3;
 }
+
 .viewed {
   color: rgba(71, 190, 253, 0.842);
 }

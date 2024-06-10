@@ -1,14 +1,14 @@
 <template>
   <div id="app">
- 
     <div class="container">
       <div class="chat-list">
         <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
-      <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
+        <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
         <div v-if="selectedChatType === 'solo'">
           <h2>Solo Chats</h2>
           <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
             <div @click="change_cred('binome', chatId)">
+              <img :src="getChatDisplayimg(chats[chatId])" alt="Profile Picture" class="profile-picture" />
               <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
               <p v-if="getLastMessage_text(chatId)">
                 Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
@@ -36,7 +36,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
@@ -198,9 +197,9 @@ export default {
           const userRef = projectFirestore.collection('users').doc(userId);
           const userDoc = await userRef.get();
           if (userDoc.exists) {
-            users[userId] = userDoc.data().user_name;
+            users[userId] = userDoc.data();
           } else {
-            users[userId] = 'Unknown';
+            users[userId] = { user_name: 'Unknown', image: '' };
           }
         } catch (error) {
           console.error('Error fetching user:', error);
@@ -212,7 +211,26 @@ export default {
       if (!users[userId]) {
         fetchUser(userId); // Fetch user data if not already fetched
       }
-      return users[userId] || 'Fetching...';
+      return users[userId]?.user_name || 'Fetching...';
+    };
+
+    const getUserPhoto = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId]?.image || '';
+    };
+
+    const getChatDisplayName = (chat) => {
+      if (!chat) return 'Unnamed Chat';
+      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
+      return getUserName(otherUserId) || 'Unnamed Chat';
+    };
+
+    const getChatDisplayimg = (chat) => {
+      if (!chat) return '';
+      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
+      return getUserPhoto(otherUserId) || '';
     };
 
     const sendMessage = async () => {
@@ -226,12 +244,6 @@ export default {
         await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${selectedChat.value.id}/list_mess`).add(message);
         newMessage.value = '';
       }
-    };
-
-    const getChatDisplayName = (chat) => {
-      if (!chat) return 'Unnamed Chat';
-      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
-      return getUserName(otherUserId) || 'Unnamed Chat';
     };
 
     onMounted(() => {
@@ -257,11 +269,13 @@ export default {
       fetchChats,
       getMessages,
       getUserName,
+      getUserPhoto,
       selectChat,
       sendMessage,
       getLastMessage_text,
       getLastMessage_timestamp,
       getChatDisplayName,
+      getChatDisplayimg,
       getLastMessage_user,
       change_cred,
       id_to_pass,
@@ -271,15 +285,14 @@ export default {
   }
 };
 </script>
-
-<style>
+<style scoped>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #2c3e50;
-margin-top:30px;
+  margin-top: 30px;
   display: flex;
-  width:100%;
+  width: 100%;
   flex-direction: column;
   align-items: center;
 }
@@ -316,14 +329,12 @@ button.active, button:hover {
   flex-direction: row;
   justify-content: space-between;
   width: 100%;
-
- /* Adjusted for button container */
 }
 
 .chat-list {
-  margin:0;
+  margin: 0;
   width: 30%;
-  height:100%;
+  height: 100%;
   text-align: left;
   padding: 10px;
   border-right: 1px solid #ddd;
@@ -346,7 +357,7 @@ button.active, button:hover {
 }
 
 .chat-details {
-  height:100%;
+  height: 100%;
   width: 70%;
   padding: 10px;
   overflow-y: auto;
