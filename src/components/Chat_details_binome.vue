@@ -4,6 +4,7 @@
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <p><strong>{{ getUserName(message.sender) }}:</strong> {{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
+      <small v-if="currentUser.uid === message.sender">{{ message.viewed }}</small>
     </div>
     <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
   </div>
@@ -45,10 +46,27 @@ export default {
 
     const subscribeToMessages = () => {
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
-      chatRef.onSnapshot(chatDoc => {
+      chatRef.onSnapshot(async chatDoc => {
         if (chatDoc.exists) {
-          messages.value = chatDoc.data().list_mess || [];
-          messages.value.forEach(message => fetchUser(message.sender));
+          const messagesList = chatDoc.data().list_mess || [];
+          const updatedMessages = [];
+          const batch = projectFirestore.batch();
+          let needToUpdate = false;
+
+          for (const message of messagesList) {
+            fetchUser(message.sender);
+            if (message.sender !== currentUser.uid && !message.viewed) {
+              message.viewed = true;
+              needToUpdate = true;
+            }
+            updatedMessages.push(message);
+          }
+
+          if (needToUpdate) {
+            await chatRef.update({ list_mess: updatedMessages });
+          }
+
+          messages.value = updatedMessages;
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
