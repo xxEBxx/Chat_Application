@@ -2,13 +2,20 @@
   <div class="chat-details">
     <h2>{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
-      <p><strong>{{ getUserName(message.sender) }}:</strong> {{ message.text }}</p>
+      <div v-if="message.sender !== currentUser.uid" class="message-header">
+        <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+        <p><strong>{{ getUserName(message.sender) }}</strong></p>
+      </div>
+      <p>{{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
-      <small v-if="currentUser.uid === message.sender"><small v-if="currentUser.uid === message.sender">
+      <small v-if="currentUser.uid === message.sender">
         <i :class="message.viewed ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
-      </small></small>
+      </small>
     </div>
-    <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
+    <div class="input-container">
+      <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
+      <button @click="sendMessage" class="send-button">Send</button>
+    </div>
   </div>
 </template>
 
@@ -32,6 +39,7 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('Loading...');
+    let unsubscribe = null;
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
@@ -40,15 +48,16 @@ export default {
         chat.value = { id: props.id, ...chatDoc.data() };
         const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
         await fetchUser(otherUserId);
-        chatTitle.value = users[otherUserId] || 'Unknown User';
+        chatTitle.value = users[otherUserId]?.user_name || 'Unknown User';
       } else {
         console.error(`No chat found with id: ${props.id}`);
       }
     };
 
     const subscribeToMessages = () => {
+      if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
-      chatRef.onSnapshot(async chatDoc => {
+      unsubscribe = chatRef.onSnapshot(async chatDoc => {
         if (chatDoc.exists) {
           const messagesList = chatDoc.data().list_mess || [];
           const updatedMessages = [];
@@ -76,13 +85,22 @@ export default {
     };
 
     const fetchUser = async (userId) => {
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Invalid userId:', userId);
+        return;
+      }
+
       if (!users[userId]) {
-        const userRef = projectFirestore.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-          users[userId] = userDoc.data().user_name;
-        } else {
-          users[userId] = 'Unknown';
+        try {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            users[userId] = userDoc.data();
+          } else {
+            users[userId] = { user_name: 'Unknown', image: '' };
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error);
         }
       }
     };
@@ -91,7 +109,11 @@ export default {
       if (!users[userId]) {
         fetchUser(userId); // Fetch user data if not already fetched
       }
-      return users[userId] || 'Fetching...';
+      return users[userId]?.user_name || 'Fetching...';
+    };
+
+    const getUserPhoto = (userId) => {
+      return users[userId]?.image || '';
     };
 
     const sendMessage = async () => {
@@ -148,6 +170,7 @@ export default {
       messages,
       newMessage,
       getUserName,
+      getUserPhoto,
       sendMessage,
       formatTimestamp,
       currentUser,
@@ -157,7 +180,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .chat-details {
   margin-top: 20px;
 }
@@ -177,10 +200,26 @@ export default {
   text-align: right;
 }
 
-.message-input {
-  width: calc(100% - 20px);
-  padding: 10px;
+.message-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.input-container {
+  display: flex;
   margin-top: 10px;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 5px;
   outline: none;
@@ -190,6 +229,21 @@ export default {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
+
+.send-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
 .viewed {
   color: rgba(71, 190, 253, 0.842);
 }
