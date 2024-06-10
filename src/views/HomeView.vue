@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="cont">
     <nav class="navbar professional">
       <p @click="make_login" :class="{ 'active': login }">Login</p>
       <p @click="make_signup" :class="{ 'active': !login }">Sign Up</p>
@@ -44,7 +44,9 @@ export default {
   background-color: #333; /* Dark background color */
   padding: 10px;
 }
-
+.cont{
+  width:100%
+}
 .navbar p {
   color: #fff; /* White text color */
   margin: 0 20px;

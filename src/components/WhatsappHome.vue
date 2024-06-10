@@ -4,6 +4,7 @@
       <nav class="navbar professional">
         <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
         <p @click="goto_home" :class="{ 'active': !go }">Home</p>
+        <router-link to="/signout" class="nav-link">Sign out</router-link>
       </nav>
     </div>      
     <div class="main-container">
@@ -95,6 +96,25 @@ export default {
 
 .active {
   font-weight: bold;
+}
+
+.nav-link {
+  color: #fff; /* White text color */
+  margin: 0 20px;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+  font-size: 18px;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.nav-link:hover {
+  color: #000; /* Text color on hover */
+  background-color: #fff; /* Background color on hover */
+  border: 1px solid #000; /* Border color on hover */
 }
 
 .professional p:first-child {

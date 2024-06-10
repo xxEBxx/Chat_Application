@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
 import Login from '../components/Login.vue';
+import signout from '../components/signout.vue';
 import Signin from '../components/Signin.vue';
 import WhatsappHome from '@/components/WhatsappHome.vue';
 import CreateChat from '@/components/CreateChat.vue';
@@ -31,7 +32,12 @@ const routes = [
     path:'/create-chat',
     name: 'CreateChat',
     component: CreateChat
-  }
+  },
+  {
+    path: '/signout',
+    name: 'signout',
+    component: signout
+  },
 ];
 
 const router = createRouter({
