@@ -81,13 +81,6 @@ export default {
 
     const chatListUnsubscribe = ref(null);
 
-    const watchUserData = watch(() => props.userData, (newVal) => {
-      if (newVal) {
-        console.log('userData is available', newVal);
-        setupChatListListener();
-      }
-    }, { immediate: true });
-
     const setupChatListListener = () => {
       if (chatListUnsubscribe.value) {
         chatListUnsubscribe.value(); // Unsubscribe from previous listener
@@ -104,6 +97,13 @@ export default {
         }
       });
     };
+
+    const watchUserData = watch(() => props.userData, (newVal) => {
+      if (newVal) {
+        console.log('userData is available', newVal);
+        setupChatListListener();
+      }
+    }, { immediate: true });
 
     const reverseChatIds = computed(() => chatIds.value.slice().reverse());
 
