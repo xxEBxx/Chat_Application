@@ -235,6 +235,7 @@ export default {
 <style scoped>
 .chat-details {
   margin-top: 20px;
+  width:100%;
   height: 500px; /* Adjust as needed */
   overflow-y: auto;
 }
