@@ -444,6 +444,6 @@ h2 {
 h3 {
   color: #555;
   font-size: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 5px;
 }
 </style>

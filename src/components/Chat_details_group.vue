@@ -3,8 +3,12 @@
     <h2>{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <div v-if="message.sender !== currentUser.uid" class="message-header">
+        <router-link :to="'/profile_other/' + message.sender">
         <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+        </router-link>
+        <router-link :to="'/profile_other/' + message.sender">
         <p><strong>{{ getUserName(message.sender) }}</strong></p>
+        </router-link>
       </div>
       <p>{{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
@@ -187,7 +191,28 @@ const sendMessage = async () => {
 <style scoped>
 .chat-details {
   margin-top: 20px;
-  width:100%;
+  width: 100%;
+  height: 500px; /* Adjust as needed */
+  overflow-y: auto;
+}
+
+/* Custom scrollbar styles */
+.chat-details::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-details::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .message-item {
@@ -251,5 +276,28 @@ const sendMessage = async () => {
 
 .viewed {
   color: rgba(71, 190, 253, 0.842);
+}
+
+.message-item.sent .message-header {
+  justify-content: flex-end;
+}
+
+.message-item.sent .profile-picture {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.message-item p {
+  margin: 5px 0;
+}
+
+.message-item small {
+  display: block;
+  margin-top: 5px;
+  color: #888;
+}
+
+.message-item.sent small {
+  text-align: right;
 }
 </style>
