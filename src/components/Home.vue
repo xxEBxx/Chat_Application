@@ -1,15 +1,10 @@
 <template>
   <div id="app">
-    <div class="button-container">
-      <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
-      <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
-      <router-link to="/create-chat" class="create-chat-link">
-        <button>Create New Chat</button>
-      </router-link>
-    </div>
-    
+ 
     <div class="container">
       <div class="chat-list">
+        <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
+      <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
         <div v-if="selectedChatType === 'solo'">
           <h2>Solo Chats</h2>
           <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
@@ -282,8 +277,9 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+margin-top:30px;
   display: flex;
+  width:100%;
   flex-direction: column;
   align-items: center;
 }
@@ -320,8 +316,8 @@ button.active, button:hover {
   flex-direction: row;
   justify-content: space-between;
   width: 100%;
-  max-width: 1200px;
-  margin-top: 120px; /* Adjusted for button container */
+
+ /* Adjusted for button container */
 }
 
 .chat-list {

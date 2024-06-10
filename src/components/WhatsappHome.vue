@@ -1,17 +1,20 @@
 <template>
-  <div>
-    <div class="top-div">
+ 
+   
       <nav class="navbar professional">
         <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
         <p @click="goto_home" :class="{ 'active': !go }">Home</p>
+        <router-link to="/create-chat" class="create-chat-link"><button>Create New Chat</button>
+        </router-link>
         <router-link to="/signout" class="nav-link">Sign out</router-link>
+
       </nav>
-    </div>      
+   
     <div class="main-container">
       <profile v-if="go"/>
       <chat v-else :user-data="userData" />
     </div>
-  </div>
+ 
 </template>
 
 <script>
@@ -100,7 +103,7 @@ export default {
 
 .nav-link {
   color: #fff; /* White text color */
-  margin: 0 20px;
+  margin: 0 ;
   cursor: pointer;
   font-family: 'Arial', sans-serif;
   font-size: 18px;
@@ -126,19 +129,10 @@ export default {
 }
 
 /* Main Container Adjustments */
-#app {
-  width:100%;
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  text-align: center;
-  color: #333; /* Darker gray for primary text */
-  margin-top: 100px; /* Adjust for fixed navbar */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: #f5f5f5; /* Light gray background */
-}
+
 .main-container{
-  width:100%
+  width:100%;
+  margin:0
 }
 /* Additional styles for responsiveness */
 @media screen and (max-width: 600px) {
