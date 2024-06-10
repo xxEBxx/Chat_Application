@@ -76,12 +76,14 @@
     </div>
     <button @click="submitChat" v-if="chatType === 'binome' && selectedUsers.length > 0" class="submit-button">Submit</button>
     <button @click="submitChat" v-if="chatType === 'group' && selectedUsers.length > 1" class="submit-button">Submit</button>
+    <button @click="cancelCreation" class="cancel-button">Cancel</button>
   </div>
 </template>
 
 <script>
 import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
+import { useRouter } from 'vue-router';
 
 export default {
   name: 'CreateChat',
@@ -96,6 +98,10 @@ export default {
       text_to_send:'',
       existingChats: []
     };
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
   },
   methods: {
     async searchUsers() {
@@ -255,10 +261,19 @@ export default {
         // Clear the selection after submission
         this.selectedUsers = [];
         this.group_name = '';
+        this.text_to_send = ''; // Clear the message input
+        this.searchTerm = ''; // Clear the search input
+        this.filteredUsers = []; // Clear the filtered users list
+
+        // Navigate back to the home page or chat list
+        this.$router.push('/whatsappHome');
       } catch (error) {
         console.error('Error submitting chat:', error);
       }
     },
+    cancelCreation() {
+      this.$router.push('/whatsappHome');
+    }
   },
   watch: {
     chatType(newType) {
@@ -459,4 +474,22 @@ export default {
   margin-left: -10px;
 }
 
+/* Cancel button styles */
+.cancel-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #444;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-button:hover {
+  background-color: #666;
+}
 </style>

@@ -3,34 +3,40 @@
     <div class="button-container">
       <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
       <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
-      <button @click="createNewChat" :class="{ active: go }">Create New Chat</button>
+      <router-link to="/create-chat" class="create-chat-link">
+        <button>Create New Chat</button>
+      </router-link>
     </div>
     
-    <CreateChat v-if="go" class="create-chat"/>
-    
-    <div v-if="selectedChatType" class="chat-container">
-      <div v-if="selectedChatType === 'solo'">
-        <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
-          <div @click="change_cred('binome',chatId)">
-            <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
-            <p v-if="getLastMessage_text(chatId)">Last message: from {{ getLastMessage_user(chatId) }}  {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
+    <div class="container">
+      <div v-if="selectedChatType" class="chat-container">
+        <div v-if="selectedChatType === 'solo'">
+          <h2>Solo Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
+            <div @click="change_cred('binome', chatId)">
+              <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
+              <p v-if="getLastMessage_text(chatId)">
+                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div v-if="selectedChatType === 'group'">
+          <h2>Group Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
+            <div @click="change_cred('group', chatId)">
+              <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
+              <p v-if="getLastMessage_text(chatId)">
+                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-      <div v-if="selectedChatType !== 'solo'">
-        <h2>{{ selectedChatType === 'solo' ? 'Solo' : 'Group' }} Chats</h2>
-        <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item" >
-          <div @click="change_cred('group',chatId)">
-            <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
-            <p v-if="getLastMessage_text(chatId)" @click="show_details_grp(chatId)">Last message: from {{ getLastMessage_user(chatId) }}   {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}</p>
-          </div>
-        </div>
+      <div>
+        <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
+        <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
       </div>
-    </div>
-    <div>
-      <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
-      <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
     </div>
   </div>
 </template>
@@ -41,14 +47,12 @@ import firebase from 'firebase/app';
 import { reactive, ref, computed, watch } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
 import Chat_details_binome from './Chat_details_binome.vue';
-import CreateChat from './CreateChat.vue';
 
 export default {
   name: 'Home',
   components: { 
     Chat_details_group,
     Chat_details_binome,
-    CreateChat
   },
   props: {
     userData: {
@@ -58,9 +62,7 @@ export default {
     }
   },
   setup(props) {
-    const go = ref(false);
     const selectedChatType = ref(null);
-    const details_grp = ref(null);
     const chatIds = ref([]);
     const chats = reactive({});
     const selectedChat = ref(null);
@@ -74,11 +76,7 @@ export default {
     const change_cred = (comp, id) => {
       id_to_pass.value = id;
       comp_to_show.value = comp;
-      console.log("here is id", id_to_pass.value, comp_to_show.value, comp_to_show === 'binome');
-    };
-
-    const createNewChat = () => {
-      go.value = !go.value;
+      selectChat(id);
     };
 
     watch(() => props.userData, (newVal) => {
@@ -192,7 +190,7 @@ export default {
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           viewed: false
         };
-        await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}`/`${selectedChat.value.id}`/list_mess).add(message);
+        await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${selectedChat.value.id}/list_mess`).add(message);
         newMessage.value = '';
       }
     };
@@ -206,16 +204,6 @@ export default {
     const show_details_grp = (chatId) => {
       details_grp.value = chatId;
     };
-
-    const check_comp_to_show = (comp) => {
-      return comp === comp_to_show.value;
-    };
-
-    watch(() => props.userData, (newVal) => {
-      if (newVal) {
-        console.log('userData is available', newVal);
-      }
-    }, { immediate: true });
 
     return {
       reverseChatIds,
@@ -232,16 +220,12 @@ export default {
       getUserName,
       selectChat,
       sendMessage,
-      createNewChat,
       getLastMessage_text,
       getLastMessage_timestamp,
       getChatDisplayName,
       getLastMessage_user,
       show_details_grp,
-      details_grp,
       change_cred,
-      check_comp_to_show,
-      go,
       id_to_pass,
       comp_to_show
     };
@@ -342,5 +326,9 @@ button.active, button:hover {
 .message-input:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.create-chat-link {
+  text-decoration: none;
 }
 </style>
