@@ -1,7 +1,7 @@
 <template>
   <div class="chat-details">
     <h2>{{ chatTitle }}</h2>
-    <div v-for="message in messages" :key="message.id" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
+    <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <p><strong>{{ getUserName(message.sender) }}:</strong> {{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
     </div>
@@ -12,7 +12,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 
 export default {
   name: 'Chat_detail_binome',
@@ -29,11 +29,6 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('Loading...');
-
-    onMounted(async () => {
-      await fetchChatDetails();
-      subscribeToMessages();
-    });
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
@@ -117,6 +112,16 @@ export default {
       const seconds = ('0' + date.getSeconds()).slice(-2);
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
+
+    onMounted(async () => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
+
+    watch(() => props.id, async (newId) => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
 
     return {
       chat,

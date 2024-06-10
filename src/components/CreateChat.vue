@@ -7,7 +7,7 @@
         <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>    
       </label>
       <label>
-        <input type="radio" v-model="chatType" value="binome" />
+        <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" />
         <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>    
       </label>
     </div>
@@ -28,9 +28,9 @@
         <div>
           <p class="username">{{ user.user_name }}</p>
           <p class="email">{{ user.email }}</p>
-          <button @click="toggleUser(user)" class="toggle-user-button">
-          {{ isUserSelected(user.id) ? '-' : '+' }}
-        </button>
+          <button @click="toggleUser(user)" class="toggle-user-button" v-if="!hasExistingChat(user.id) || chatType === 'group'">
+            {{ isUserSelected(user.id) ? '-' : '+' }}
+          </button>
         </div>
       </div>
     </div>
@@ -50,18 +50,18 @@
     
       <h4>Selected Users for Group Chat</h4>
       <div class="search-results">
-      <div
-        v-for="(user, index) in selectedUsers"
-        :key="user.id"
-        class="search-result-item"
-      >
-        <img :src="user.image" alt="Profile Picture" class="profile-picture" />
-        <div>
-          <p class="username">{{ user.user_name }}</p>
-          <p class="email">{{ user.email }}</p>
+        <div
+          v-for="(user, index) in selectedUsers"
+          :key="user.id"
+          class="search-result-item"
+        >
+          <img :src="user.image" alt="Profile Picture" class="profile-picture" />
+          <div>
+            <p class="username">{{ user.user_name }}</p>
+            <p class="email">{{ user.email }}</p>
+          </div>
         </div>
       </div>
-    </div>
     </div>
     <div v-if="chatType === 'binome' && selectedUsers.length > 0">
       <h4>Selected User for Binome Chat</h4>
@@ -79,7 +79,6 @@
   </div>
 </template>
 
-
 <script>
 import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
@@ -94,7 +93,8 @@ export default {
       selectedUsers: [],
       chatType: 'group', 
       group_name: '', 
-      text_to_send:''
+      text_to_send:'',
+      existingChats: []
     };
   },
   methods: {
@@ -119,6 +119,9 @@ export default {
     isUserSelected(userId) {
       return this.selectedUsers.some(user => user.id === userId);
     },
+    hasExistingChat(userId) {
+      return this.existingChats.includes(userId);
+    },
     toggleUser(user) {
       if (this.isUserSelected(user.id)) {
         this.removeChat(user.id);
@@ -140,59 +143,79 @@ export default {
     removeChat(userId) {
       this.selectedUsers = this.selectedUsers.filter(user => user.id !== userId);
     },
-    async submitChat() {
-      try {
-    const creatorId = getUser().uid;
+    async fetchExistingChats() {
+      if (this.chatType !== 'binome') {
+        this.existingChats = [];
+        return;
+      }
 
-    if (this.chatType === 'group') {
-      console.log('Creating group chat with name:', this.group_name, 'and users:', this.selectedUsers);
+      const creatorId = getUser().uid;
+      const existingChatsSnapshot = await projectFirestore.collection('messages_binome')
+        .where('participants', 'array-contains', creatorId)
+        .get();
 
-      const groupChatRef = await projectFirestore.collection('messages_group').add({
-        group_name: this.group_name,
-        members: [...this.selectedUsers.map(user => user.id), creatorId],
-        created_at: Date.now(),
-        creator_id: creatorId,
-        last_message_sender: creatorId,
-        last_message_text: this.text_to_send,
-        last_message_timestamp: Date.now(),
-        last_message_viewed_by: [],
-        list_mess: [{
-          sender: creatorId,
-          text: this.text_to_send,
-          timestamp: Date.now(),
-          viewed_by: [],
-        }],
-      });
-
-      const groupId = groupChatRef.id;
-
-      // Update each user's document to include the new group chat ID
-      const batch = projectFirestore.batch();
-      this.selectedUsers.forEach(async (user) => {
-        const userRef = projectFirestore.collection('users').doc(user.id);
-        const updatedData = await userRef.get();
-        const updatedChats = updatedData.data().chats_group || [];
-        const toAddChats = [...updatedChats, groupId];
-        batch.update(userRef, {
-          chats_group: toAddChats
+      this.existingChats = [];
+      existingChatsSnapshot.forEach(doc => {
+        const data = doc.data();
+        data.participants.forEach(participant => {
+          if (participant !== creatorId) {
+            this.existingChats.push(participant);
+          }
         });
       });
+    },
+    async submitChat() {
+      try {
+        const creatorId = getUser().uid;
 
-      const creatorRef = projectFirestore.collection('users').doc(creatorId);
-      const creatorData = await creatorRef.get();
-      const creatorChats = creatorData.data().chats_group || [];
-      const toAddCreatorChats = [...creatorChats, groupId];
-      batch.update(creatorRef, {
-        chats_group: toAddCreatorChats
-      });
+        if (this.chatType === 'group') {
+          console.log('Creating group chat with name:', this.group_name, 'and users:', this.selectedUsers);
 
-      await batch.commit();
+          const groupChatRef = await projectFirestore.collection('messages_group').add({
+            group_name: this.group_name,
+            members: [...this.selectedUsers.map(user => user.id), creatorId],
+            created_at: Date.now(),
+            creator_id: creatorId,
+            last_message_sender: creatorId,
+            last_message_text: this.text_to_send,
+            last_message_timestamp: Date.now(),
+            last_message_viewed_by: [],
+            list_mess: [{
+              sender: creatorId,
+              text: this.text_to_send,
+              timestamp: Date.now(),
+              viewed_by: [],
+            }],
+          });
 
-      console.log('Group chat created with ID:', groupId);
+          const groupId = groupChatRef.id;
+
+          // Update each user's document to include the new group chat ID
+          const batch = projectFirestore.batch();
+          this.selectedUsers.forEach(async (user) => {
+            const userRef = projectFirestore.collection('users').doc(user.id);
+            const updatedData = await userRef.get();
+            const updatedChats = updatedData.data().chats_group || [];
+            const toAddChats = [...updatedChats, groupId];
+            batch.update(userRef, {
+              chats_group: toAddChats
+            });
+          });
+
+          const creatorRef = projectFirestore.collection('users').doc(creatorId);
+          const creatorData = await creatorRef.get();
+          const creatorChats = creatorData.data().chats_group || [];
+          const toAddCreatorChats = [...creatorChats, groupId];
+          batch.update(creatorRef, {
+            chats_group: toAddCreatorChats
+          });
+
+          await batch.commit();
+
+          console.log('Group chat created with ID:', groupId);
         } else {
           const creatorId = getUser().uid; 
           const otherUser = this.selectedUsers[0].id;
-
 
           // Create a new document in the messages_binome collection
           const binomeChatRef = await projectFirestore.collection('messages_binome').add({
@@ -236,6 +259,13 @@ export default {
         console.error('Error submitting chat:', error);
       }
     },
+  },
+  watch: {
+    chatType(newType) {
+      if (newType === 'binome') {
+        this.fetchExistingChats();
+      }
+    }
   },
 };
 </script>
