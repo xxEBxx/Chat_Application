@@ -240,6 +240,25 @@ export default {
   overflow-y: auto;
 }
 
+/* Custom scrollbar styles */
+.chat-details::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-details::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 .message-item {
   padding: 10px;
   margin: 10px 0;
