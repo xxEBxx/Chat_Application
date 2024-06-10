@@ -8,6 +8,9 @@
       </div>
       <p>{{ message.text }}</p>
       <small>{{ formatTimestamp(message.timestamp) }}</small>
+      <small v-if="currentUser.uid === message.sender">
+        <i :class="isMessageFullyViewed(message) ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
+      </small>
     </div>
     <div class="input-container">
       <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
@@ -53,10 +56,30 @@ export default {
     const subscribeToMessages = () => {
       if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
-      unsubscribe = chatRef.onSnapshot(chatDoc => {
+      unsubscribe = chatRef.onSnapshot(async chatDoc => {
         if (chatDoc.exists) {
-          messages.value = chatDoc.data().list_mess || [];
-          messages.value.forEach(message => fetchUser(message.sender));
+          const messagesList = chatDoc.data().list_mess || [];
+          const updatedMessages = [];
+          const batch = projectFirestore.batch();
+          let needToUpdate = false;
+
+          for (const message of messagesList) {
+            await fetchUser(message.sender);
+            if (!message.viewed_by) {
+              message.viewed_by = [];
+            }
+            if (!message.viewed_by.includes(currentUser.uid)) {
+              message.viewed_by.push(currentUser.uid);
+              needToUpdate = true;
+            }
+            updatedMessages.push(message);
+          }
+
+          if (needToUpdate) {
+            await chatRef.update({ list_mess: updatedMessages });
+          }
+
+          messages.value = updatedMessages;
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
@@ -98,7 +121,7 @@ export default {
           sender: currentUser.uid,
           text: newMessage.value,
           timestamp: Date.now(),
-          viewed: false
+          viewed_by: []
         };
         const chatRef = projectFirestore.collection('messages_group').doc(props.id);
         const chatDoc = await chatRef.get();
@@ -117,6 +140,10 @@ export default {
           console.error(`No chat found with id: ${props.id}`);
         }
       }
+    };
+
+    const isMessageFullyViewed = (message) => {
+      return message.viewed_by.length === chat.value.members.length ;
     };
 
     const formatTimestamp = (timestamp) => {
@@ -149,12 +176,15 @@ export default {
       getUserPhoto,
       sendMessage,
       formatTimestamp,
+      isMessageFullyViewed,
       currentUser,
       chatTitle
     };
   }
 };
 </script>
+
+
 
 <style scoped>
 .chat-details {
