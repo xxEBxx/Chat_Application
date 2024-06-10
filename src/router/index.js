@@ -6,6 +6,7 @@ import signout from '../components/signout.vue';
 import Signin from '../components/Signin.vue';
 import WhatsappHome from '@/components/WhatsappHome.vue';
 import CreateChat from '@/components/CreateChat.vue';
+import ProfileOther from '@/views/ProfileOther.vue'
 
 const routes = [
   {
@@ -38,6 +39,12 @@ const routes = [
     name: 'signout',
     component: signout
   },
+  {
+    path:'/profile_other/:id',
+    name:'ProfileOther',
+    component:ProfileOther,
+    props:true
+  }
 ];
 
 const router = createRouter({
