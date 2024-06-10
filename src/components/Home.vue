@@ -44,7 +44,7 @@
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, computed, watch } from 'vue';
+import { reactive, ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import Chat_details_group from './Chat_details_group.vue';
 import Chat_details_binome from './Chat_details_binome.vue';
 
@@ -79,28 +79,47 @@ export default {
       selectChat(id);
     };
 
-    watch(() => props.userData, (newVal) => {
+    const chatListUnsubscribe = ref(null);
+
+    const watchUserData = watch(() => props.userData, (newVal) => {
       if (newVal) {
         console.log('userData is available', newVal);
+        setupChatListListener();
       }
     }, { immediate: true });
+
+    const setupChatListListener = () => {
+      if (chatListUnsubscribe.value) {
+        chatListUnsubscribe.value(); // Unsubscribe from previous listener
+      }
+
+      const chatType = selectedChatType.value === 'solo' ? 'chats_binome' : 'chats_group';
+      const userChatsRef = projectFirestore.collection('users').doc(currentUser.uid);
+      
+      chatListUnsubscribe.value = userChatsRef.onSnapshot((doc) => {
+        if (doc.exists) {
+          const userData = doc.data();
+          chatIds.value = selectedChatType.value === 'solo' ? userData.chats_binome : userData.chats_group;
+          fetchChats();
+        }
+      });
+    };
 
     const reverseChatIds = computed(() => chatIds.value.slice().reverse());
 
     const selectChatType = async (type) => {
-      if (!props.userData || !props.userData.chats_binome || !props.userData.chats_group) {
-        console.error("userData is not available");
-        return;
-      }
-
       selectedChatType.value = type;
-      chatIds.value = type === 'solo' ? props.userData.chats_binome : props.userData.chats_group;
-      await fetchChats();
+      setupChatListListener();
     };
 
     const fetchChats = async () => {
       try {
         for (const chatId of chatIds.value) {
+          if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+            console.error('Invalid chatId:', chatId);
+            continue;
+          }
+
           const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
           chatRef.onSnapshot(chatDoc => {
             if (chatDoc.exists) {
@@ -143,11 +162,20 @@ export default {
     };
 
     const selectChat = async (chatId) => {
-      const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
-      const chatDoc = await chatRef.get();
-      if (chatDoc.exists) {
-        selectedChat.value = { id: chatId, ...chatDoc.data() };
-        await fetchMessages(chatId);
+      if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+        console.error('Invalid chatId:', chatId);
+        return;
+      }
+
+      try {
+        const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          selectedChat.value = { id: chatId, ...chatDoc.data() };
+          await fetchMessages(chatId);
+        }
+      } catch (error) {
+        console.error('Error selecting chat:', error);
       }
     };
 
@@ -164,13 +192,22 @@ export default {
     };
 
     const fetchUser = async (userId) => {
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Invalid userId:', userId);
+        return;
+      }
+      
       if (!users[userId]) {
-        const userRef = projectFirestore.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-          users[userId] = userDoc.data().user_name;
-        } else {
-          users[userId] = 'Unknown';
+        try {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            users[userId] = userDoc.data().user_name;
+          } else {
+            users[userId] = 'Unknown';
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error);
         }
       }
     };
@@ -201,9 +238,15 @@ export default {
       return getUserName(otherUserId) || 'Unnamed Chat';
     };
 
-    const show_details_grp = (chatId) => {
-      details_grp.value = chatId;
-    };
+    onMounted(() => {
+      setupChatListListener();
+    });
+
+    onUnmounted(() => {
+      if (chatListUnsubscribe.value) {
+        chatListUnsubscribe.value(); // Unsubscribe from listener when component unmounts
+      }
+    });
 
     return {
       reverseChatIds,
@@ -224,10 +267,10 @@ export default {
       getLastMessage_timestamp,
       getChatDisplayName,
       getLastMessage_user,
-      show_details_grp,
       change_cred,
       id_to_pass,
-      comp_to_show
+      comp_to_show,
+      watchUserData
     };
   }
 };
