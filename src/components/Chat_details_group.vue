@@ -19,7 +19,9 @@
     <div class="input-container">
       <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
       <button @click="sendMessage" class="send-button">Send</button>
-      <button @click="passToAdmin" class="remove-button">...</button>
+      <button @click="passToAdmin" class="send-button">
+        <i class="bi bi-gear" style="font-size: 1rem; color: white;"></i>
+      </button>
     </div>
   </div>
 </template>
@@ -28,6 +30,8 @@ import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
 import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 
 export default {
   name: 'ChatDetailsGrp',
