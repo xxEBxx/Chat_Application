@@ -2,7 +2,9 @@
   <div class="min-h-screen flex flex-col bg-gray-100">
     <nav class="bg-gray-800 text-white py-1 px-4 flex justify-between items-center">
       <div class="flex items-center space-x-7">
-        <p class="flex items-center justify-center h-full">LOGO</p>
+        <div class="bg-gray-800 p-1 rounded">
+          <img src="@/assets/logo_no_bg.jpg" alt="Logo" class="h-8 w-8" />
+        </div>
         <p @click="goto_home" :class="['cursor-pointer flex items-center justify-center h-full', !go ? 'font-bold' : '']">
           <i class="bi bi-house-door-fill" style="font-size: 1.5rem; color: white;"></i>
         </p>
@@ -32,7 +34,6 @@
     </div>
   </div>
 </template>
-
 
 <script>
 import { auth, projectFirestore } from '@/firebase/config.js'; // Adjusted import for simplicity
@@ -123,4 +124,7 @@ export default {
     font-size: 16px;
   }
 }
+img {
+    background-color: #2d3748; /* This is the hex color equivalent of bg-gray-800 */
+  }
 </style>
