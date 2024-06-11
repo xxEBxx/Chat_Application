@@ -13,7 +13,7 @@
             <div class="flex-1">
               <h3 class="font-semibold">{{ getChatDisplayName(chats[chatId]) }}</h3>
               <p class="text-sm text-gray-600" v-if="getLastMessage_text(chatId)">
-                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+                <strong>{{ getLastMessage_user(chatId) }} :</strong>{{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
               </p>
             </div>
           </div>
@@ -21,11 +21,15 @@
         <div v-if="selectedChatType === 'group'">
           <h2 class="text-xl font-bold mt-4">Group Chats</h2>
           <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item p-4 bg-gray-100 rounded-lg shadow-sm transition duration-300 ease-in-out hover:bg-gray-200 cursor-pointer" @click="change_cred('group', chatId)">
-            <h3 class="font-semibold" v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
-            <p class="text-sm text-gray-600" v-if="getLastMessage_text(chatId)">
-              Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
-            </p>
-          </div>
+  <h3 class="text-xl font-bold mb-2" v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3> 
+  <div v-if="getLastMessage_text(chatId)">
+    <p class="text-sm text-gray-600">
+      <strong>{{ getLastMessage_user(chatId) }}:</strong> {{ getLastMessage_text(chatId) }}
+    </p>
+    <p class="text-xs text-gray-500 text-right mt-1">{{ getLastMessage_timestamp(chatId) }}</p>
+  </div>
+</div>
+
         </div>
       </div>
       
