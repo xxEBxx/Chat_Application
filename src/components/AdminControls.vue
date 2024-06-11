@@ -7,9 +7,15 @@
       <button v-if="isAdmin && user.id !== currentUser.uid" @click="removeUser(user.id)" class="remove-button">Remove</button>
     </div>
     <div v-if="isAdmin" class="add-user">
-      <input v-model="newUserEmail" placeholder="Add user by email" class="add-user-input" />
+      <input v-model="newUserEmail" @input="searchUsers" placeholder="Add user by email" class="add-user-input" />
+      <ul v-if="suggestedUsers.length" class="suggested-users">
+        <li v-for="suggestedUser in suggestedUsers" :key="suggestedUser.id" @click="selectUser(suggestedUser)">
+          {{ suggestedUser.email }}
+        </li>
+      </ul>
       <button @click="addUser" class="add-button">Add</button>
     </div>
+    <button @click="returnToChat" class="return-button">Return to Chat</button>
   </div>
 </template>
 
@@ -17,6 +23,8 @@
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
 import { ref, onMounted } from 'vue';
+import router from '@/router';
+import debounce from 'lodash.debounce';
 
 export default {
   name: 'AdminControls',
@@ -29,6 +37,7 @@ export default {
   setup(props) {
     const users = ref([]);
     const newUserEmail = ref('');
+    const suggestedUsers = ref([]);
     const members = ref([]);
     const currentUser = firebase.auth().currentUser;
     const isAdmin = ref(false);
@@ -63,6 +72,27 @@ export default {
 
     const checkIfAdmin = () => {
       isAdmin.value = members.value.includes(currentUser.uid);
+    };
+
+    const searchUsers = debounce(async () => {
+      try {
+        if (newUserEmail.value.trim()) {
+          const usersRef = await projectFirestore.collection('users')
+            .where('email', '>=', newUserEmail.value.trim())
+            .where('email', '<=', newUserEmail.value.trim() + '\uf8ff')
+            .get();
+          suggestedUsers.value = usersRef.docs.map(doc => ({ id: doc.id, email: doc.data().email }));
+        } else {
+          suggestedUsers.value = [];
+        }
+      } catch (error) {
+        console.error('Error searching users:', error);
+      }
+    }, 300);
+
+    const selectUser = (user) => {
+      newUserEmail.value = user.email;
+      suggestedUsers.value = [];
     };
 
     const addUser = async () => {
@@ -130,8 +160,11 @@ export default {
 
     const alertRemovedUser = (userName) => {
       // Alert the removed user
-      window.alert(`You have been removed from the group chat by the admin.`);
     };
+
+    const returnToChat = () => {
+        router.push('/whatsappHome');
+      };
 
     onMounted(fetchMessagesGroup);
 
@@ -140,8 +173,12 @@ export default {
       removeUser,
       addUser,
       newUserEmail,
+      suggestedUsers,
       isAdmin,
-      currentUser
+      currentUser,
+      returnToChat,
+      searchUsers,
+      selectUser
     };
   }
 };
@@ -174,6 +211,7 @@ export default {
 }
 
 .add-user {
+  position: relative;
   display: flex;
   align-items: center;
   margin-top: 10px;
@@ -190,6 +228,31 @@ export default {
 .add-user-input:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.suggested-users {
+  position: absolute;
+  top: 40px;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+  z-index: 10;
+  max-height: 150px;
+  overflow-y: auto;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.suggested-users li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.suggested-users li:hover {
+  background-color: #f1f1f1;
 }
 
 .add-button {

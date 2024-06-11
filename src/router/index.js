@@ -10,6 +10,7 @@ import ProfileOther from '@/views/ProfileOther.vue'
 import notification from '../components/notification.vue';
 import AdminControls from '@/components/AdminControls.vue';
 
+
 const routes = [
   {
     path: '/',
