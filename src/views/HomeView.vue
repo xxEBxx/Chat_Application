@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="left-pane">
-      <img src="https://img.freepik.com/premium-vector/chatting-messaging-man-woman-chatting-smartphone-hand-holding-mobile-phone-with-text-messages_136162-238.jpg" alt="Chatting Illustration">
+      <img src="../assets/logo_no_bg.jpg" alt="Chatting Illustration">
     </div>
     <div class="right-pane">
       <div class="button-group">
@@ -44,9 +44,9 @@ export default {
 
 <style scoped>
 .container {
-  margin-right: 0;
+  margin-left: 6%;
   display: flex;
-  width:8000px;
+  width:100%;
   height: 100vh;
   background-color: #f4f4f4;
 }
@@ -134,6 +134,6 @@ export default {
   .button-group button {
     margin: 5px 0;
     width: 100%;
-  }
+}
 }
 </style>
