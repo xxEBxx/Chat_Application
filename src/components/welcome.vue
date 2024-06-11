@@ -3,7 +3,7 @@
     <div class="p-8 bg-white rounded-lg shadow-lg max-w-4xl w-full">
       <div class="flex flex-col md:flex-row items-center">
         <img
-          src="https://appinventiv.com/wp-content/uploads/2021/08/firebase-chat-app.png"
+          src="https://img.freepik.com/premium-vector/chatting-messaging-man-woman-chatting-smartphone-hand-holding-mobile-phone-with-text-messages_136162-238.jpg"
           alt="Chat App"
           class="w-full md:w-1/2 rounded-lg mb-4 md:mb-0"
         />
@@ -20,7 +20,7 @@
             <li>Public Group Chats</li>
           </ul>
           <button @click="goToWhatsappHome" class="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none">
-            Go to WhatsappHome
+            Go to ConnectifyHome
           </button>
         </div>
       </div>
