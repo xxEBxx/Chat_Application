@@ -137,7 +137,7 @@ export default {
       const userDoc = await userRef.get();
       if (userDoc.exists) {
         const notifications = userDoc.data().notifications || [];
-        notifications.push({ status: 'unread', username: senderName, message: messageText, timestamp: Date.now() });
+        notifications.push({ status: 'unread', chatname: senderName, message: messageText, timestamp: Date.now() });
         await userRef.update({ notifications });
       } else {
         console.error('User does not exist');

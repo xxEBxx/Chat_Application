@@ -157,7 +157,7 @@ export default {
       const userDoc = await userRef.get();
       if (userDoc.exists) {
         const notifications = userDoc.data().notifications || [];
-        notifications.push({ status: 'unread', username: groupName, message: messageText, timestamp: Date.now() });
+        notifications.push({ status: 'unread', chatname: groupName, message: messageText, timestamp: Date.now() });
         await userRef.update({ notifications });
       } else {
         console.error(`No user found with id: ${userId}`);
