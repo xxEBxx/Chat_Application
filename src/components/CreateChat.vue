@@ -221,7 +221,7 @@ export default {
           console.log('Group chat created with ID:', groupId);
 
           // Send notifications to group members (excluding the creator)
-          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' + this.group_name, this.group_name);
+          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' +this.text_to_send,this.group_name);
 
         } else {
           const otherUser = this.selectedUsers[0].id;
@@ -265,7 +265,7 @@ export default {
           const creatorUsername = creatorDoc.data().user_name;
 
         
-          await this.sendNotifications([otherUser], 'New binome chat created', creatorUsername);
+          await this.sendNotifications([otherUser], 'New binome chat created'+this.text_to_send, creatorUsername);
         }
 
         this.cancelCreation();

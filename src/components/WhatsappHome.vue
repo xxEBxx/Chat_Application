@@ -1,21 +1,17 @@
 <template>
- 
-   
-      <nav class="navbar professional">
-        <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
-        <p @click="goto_home" :class="{ 'active': !go }">Home</p>
-        <router-link to="/create-chat" class="create-chat-link"><button>Create New Chat</button>
-        </router-link>
-        <router-link to="/signout" class="nav-link">Sign out</router-link>
-        <router-link :to="'/notification'+ message.sender" >Notification</router-link>
-       
-      </nav>
-   
-    <div class="main-container">
-      <profile v-if="go"/>
-      <chat v-else :user-data="userData" />
-    </div>
- 
+  <nav class="navbar professional">
+    <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
+    <p @click="goto_home" :class="{ 'active': !go }">Home</p>
+    <router-link to="/create-chat" class="create-chat-link">
+      <button>Create New Chat</button>
+    </router-link>
+    <router-link to="/signout" class="nav-link">Sign out</router-link>
+    <router-link :to="'/notification/' + userId">Notification</router-link>
+  </nav>
+  <div class="main-container">
+    <profile v-if="go" />
+    <chat v-else :user-data="userData" />
+  </div>
 </template>
 
 <script>
@@ -33,13 +29,12 @@ export default {
   data() {
     return {
       go: false,
-      user: null,
-      chat_bin: true,
+      userId: null,
       userData: null
     };
   },
-  created() {
-    this.fetchUserData();
+  async created() {
+    await this.fetchUserData();
   },
   methods: {
     goto_profile() {
@@ -55,6 +50,7 @@ export default {
           const userDoc = await projectFirestore.collection('users').doc(user.uid).get();
           if (userDoc.exists) {
             this.userData = userDoc.data();
+            this.userId = user.uid;  // Store the user ID
           } else {
             console.log("No such document!");
           }
@@ -68,6 +64,8 @@ export default {
   }
 };
 </script>
+
+
 
 <style scoped>
 /* Navbar Styles */
@@ -130,11 +128,11 @@ export default {
 }
 
 /* Main Container Adjustments */
-
-.main-container{
-  width:100%;
-  margin:0
+.main-container {
+  width: 100%;
+  margin: 0;
 }
+
 /* Additional styles for responsiveness */
 @media screen and (max-width: 600px) {
   .navbar p {
@@ -148,6 +146,7 @@ export default {
     padding: 8px;
   }
   .create-chat button {
-    padding: 8px 16px;}
+    padding: 8px 16px;
+  }
 }
 </style>

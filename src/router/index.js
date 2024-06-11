@@ -41,9 +41,10 @@ const routes = [
     component: signout
   },
   {
-    path: '/notification/:id',
+    path: '/notification/:userId',
     name: 'notificationut',
-    component: notification
+    component: notification,
+    props:true
   },
   {
     path:'/profile_other/:id',
