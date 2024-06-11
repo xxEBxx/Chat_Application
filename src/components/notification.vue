@@ -4,7 +4,7 @@
       <router-link to="/WhatsappHome" class="back-link">Back to Home</router-link>
       <ul>
         <li v-for="notification in notifications" :key="notification.id">
-          <strong>{{ notification.chatname }}</strong>: {{ notification.text }} {{ notification.status }}
+          <strong>{{ notification.chatname }}</strong>: {{ notification.message }} {{ notification.status }}
         </li>
       </ul>
       <button @click="updateNotificationsToRead">I clicked</button>
