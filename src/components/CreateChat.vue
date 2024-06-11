@@ -93,9 +93,9 @@ export default {
       users: [],
       filteredUsers: [],
       selectedUsers: [],
-      chatType: 'group', 
-      group_name: '', 
-      text_to_send:'',
+      chatType: 'group',
+      group_name: '',
+      text_to_send: '',
       existingChats: []
     };
   },
@@ -219,8 +219,11 @@ export default {
           await batch.commit();
 
           console.log('Group chat created with ID:', groupId);
+
+          // Send notifications to group members (excluding the creator)
+          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' + this.group_name, this.group_name);
+
         } else {
-          const creatorId = getUser().uid; 
           const otherUser = this.selectedUsers[0].id;
 
           // Create a new document in the messages_binome collection
@@ -240,6 +243,7 @@ export default {
           });
 
           const chatId = binomeChatRef.id;
+
           const updated_data=await projectFirestore.collection('users').doc(creatorId).get();
           const updated_chats=updated_data.data().chats_binome;
           const to_add_chats=[...updated_chats,chatId];
@@ -248,43 +252,64 @@ export default {
             chats_binome:to_add_chats
           });
 
-          const updated_data1=await projectFirestore.collection('users').doc(otherUser).get();
-          const updated_chats1=updated_data1.data().chats_binome;
-          const to_add_chats1=[...updated_chats1,chatId];
-          
+          const updated_data2=await projectFirestore.collection('users').doc(otherUser).get();
+          const updated_chats2=updated_data2.data().chats_binome;
+          const to_add_chats2=[...updated_chats2,chatId];
+
           await projectFirestore.collection('users').doc(otherUser).update({
-            chats_binome:to_add_chats1
+            chats_binome:to_add_chats2
           });
 
           console.log('Binome chat created with ID:', chatId);
-        }
-        // Clear the selection after submission
-        this.selectedUsers = [];
-        this.group_name = '';
-        this.text_to_send = ''; // Clear the message input
-        this.searchTerm = ''; // Clear the search input
-        this.filteredUsers = []; // Clear the filtered users list
+          const creatorDoc = await projectFirestore.collection('users').doc(creatorId).get();
+          const creatorUsername = creatorDoc.data().user_name;
 
-        // Navigate back to the home page or chat list
-        this.$router.push('/whatsappHome');
+        
+          await this.sendNotifications([otherUser], 'New binome chat created', creatorUsername);
+        }
+
+        this.cancelCreation();
       } catch (error) {
-        console.error('Error submitting chat:', error);
+        console.error('Error creating chat:', error);
+      }
+    },
+    async sendNotifications(userIds, message, chatName) {
+      try {
+        const batch = projectFirestore.batch();
+        for (const userId of userIds) {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          const notifications = userDoc.data().notifications || [];
+
+          notifications.push({
+            message: message,
+            chatname: chatName,
+            timestamp: Date.now(),
+            status: false
+          });
+
+          batch.update(userRef, { notifications });
+        }
+        await batch.commit();
+        console.log('Notifications sent');
+      } catch (error) {
+        console.error('Error sending notifications:', error);
       }
     },
     cancelCreation() {
-      this.$router.push('/whatsappHome');
+      this.searchTerm = '';
+      this.filteredUsers = [];
+      this.selectedUsers = [];
+      this.group_name = '';
+      this.text_to_send = '';
+      this.router.push('/WhatsappHome');
     }
   },
-  watch: {
-    chatType(newType) {
-      if (newType === 'binome') {
-        this.fetchExistingChats();
-      }
-    }
-  },
+  created() {
+    this.fetchExistingChats();
+  }
 };
 </script>
-
 <style scoped>
 /* Wrapper for the entire component */
 .create-chat-wrapper {
@@ -493,3 +518,4 @@ export default {
   background-color: #666;
 }
 </style>
+

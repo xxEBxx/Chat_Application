@@ -7,6 +7,7 @@ import Signin from '../components/Signin.vue';
 import WhatsappHome from '@/components/WhatsappHome.vue';
 import CreateChat from '@/components/CreateChat.vue';
 import ProfileOther from '@/views/ProfileOther.vue'
+import notification from '../components/notification.vue';
 
 const routes = [
   {
@@ -38,6 +39,11 @@ const routes = [
     path: '/signout',
     name: 'signout',
     component: signout
+  },
+  {
+    path: '/notification/:id',
+    name: 'notificationut',
+    component: notification
   },
   {
     path:'/profile_other/:id',

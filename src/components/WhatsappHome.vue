@@ -7,7 +7,8 @@
         <router-link to="/create-chat" class="create-chat-link"><button>Create New Chat</button>
         </router-link>
         <router-link to="/signout" class="nav-link">Sign out</router-link>
-
+        <router-link :to="'/notification'+ message.sender" >Notification</router-link>
+       
       </nav>
    
     <div class="main-container">

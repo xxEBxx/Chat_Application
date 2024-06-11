@@ -120,6 +120,8 @@ export default {
       return users[userId]?.image || '';
     };
 
+    
+
     const addNotification = async (userId, messageText, senderName) => {
       const userRef = projectFirestore.collection('users').doc(userId);
       const userDoc = await userRef.get();
@@ -128,11 +130,10 @@ export default {
         notifications.push({ status: 'unread', username: senderName, text: messageText, timestamp: Date.now() });
         await userRef.update({ notifications });
       } else {
-        console.error(`No user found with id: ${userId}`);
+      
       }
     };
-
-    const sendMessage = async () => {
+const sendMessage = async () => {
       if (newMessage.value.trim()) {
         const message = {
           sender: currentUser.uid,
@@ -152,14 +153,13 @@ export default {
             last_message_viewed: false,
             list_mess: currentMessages
           });
-
-          const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
+ const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
           const senderName = getUserName(currentUser.uid); // Get the sender's name
           await addNotification(otherUserId, message.text, senderName);
 
           newMessage.value = '';
         } else {
-          console.error(`No chat found with id: ${props.id}`);
+        
         }
       }
     };
@@ -187,6 +187,7 @@ export default {
     });
 
     return {
+      addNotification,
       chat,
       messages,
       newMessage,
