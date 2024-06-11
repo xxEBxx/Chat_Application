@@ -123,14 +123,14 @@ export default {
         console.log("User added successfully with ID:", this.user.uid);
 
         setUser(this.user);
-        this.$router.push('/whatsappHome');
+        this.$router.push('/welcoming');
       } catch (error) {
         console.error("Error creating user:", error);
       }
     },
     GOOGLE() {
       signInGoogle();
-      this.$router.push('/whatsappHome');
+      this.$router.push('/welcoming');
     }
   }
 };

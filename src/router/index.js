@@ -11,6 +11,7 @@ import notification from '../components/notification.vue';
 import AdminControls from '@/components/AdminControls.vue';
 import CreateGroupChat from '@/components/CreateGroupChat.vue';
 import PublicShow from '@/components/PublicShow.vue';
+import Welcome from '@/components/welcome.vue';
 
 
 const routes = [
@@ -71,6 +72,11 @@ const routes = [
   path: '/public-groups',
   name: 'PublicShow',
   component: PublicShow,
+},
+{
+  path: '/welcoming',
+  name: 'Welcome',
+  component: Welcome,
 },
 
 ];
