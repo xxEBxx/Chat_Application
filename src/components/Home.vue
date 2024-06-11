@@ -24,7 +24,7 @@
   <h3 class="text-xl font-bold mb-2" v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3> 
   <div v-if="getLastMessage_text(chatId)">
     <p class="text-sm text-gray-600">
-      <strong>{{ getLastMessage_user(chatId) }}:</strong> {{ getLastMessage_text(chatId) }}
+      <pre>  <strong>{{ getLastMessage_user(chatId) }}:</strong> {{ getLastMessage_text(chatId) }}</pre>
     </p>
     <p class="text-xs text-gray-500 text-right mt-1">{{ getLastMessage_timestamp(chatId) }}</p>
   </div>
@@ -139,8 +139,13 @@ export default {
     };
 
     const getLastMessage_text = (chatId) => {
-      return chats[chatId] ? chats[chatId].last_message_text : null;
-    };
+  if (chats[chatId] && chats[chatId].last_message_text) {
+    const message = chats[chatId].last_message_text;
+    return message.length > 30 ? message.substring(0, 30) + '...' : message;
+  }
+  return null;
+};
+
 
     const getLastMessage_timestamp = (chatId) => {
       const time = chats[chatId].last_message_timestamp;
