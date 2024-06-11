@@ -1,4 +1,5 @@
 <template>
+  
     <div class="signout-container">
       <p class="signout-message">Are you sure you want to sign out?</p>
       <button @click="signOut" class="signout-button signout-button1">Sign Out</button>
