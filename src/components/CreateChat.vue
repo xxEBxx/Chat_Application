@@ -4,11 +4,11 @@
     <div class="chat-type-selector">
       <label>
         <input type="radio" v-model="chatType" value="group" />
-        <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>    
+        <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>
       </label>
       <label>
         <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" />
-        <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>    
+        <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>
       </label>
     </div>
     <input
@@ -28,7 +28,11 @@
         <div>
           <p class="username">{{ user.user_name }}</p>
           <p class="email">{{ user.email }}</p>
-          <button @click="toggleUser(user)" class="toggle-user-button" v-if="!hasExistingChat(user.id) || chatType === 'group'">
+          <button
+            v-if="!hasExistingChat(user.id) || chatType === 'group'"
+            @click="toggleUser(user)"
+            class="toggle-user-button"
+          >
             {{ isUserSelected(user.id) ? '-' : '+' }}
           </button>
         </div>
@@ -47,7 +51,7 @@
         placeholder="Group name"
         class="message-input group-name"
       />
-    
+
       <h4>Selected Users for Group Chat</h4>
       <div class="search-results">
         <div
@@ -71,20 +75,28 @@
           <div>
             <p class="username">{{ selectedUsers[0].user_name }}</p>
           </div>
-        </div> 
-      </div>     
+        </div>
+      </div>
     </div>
     <button @click="submitChat" v-if="chatType === 'binome' && selectedUsers.length > 0" class="submit-button">Submit</button>
     <button @click="submitChat" v-if="chatType === 'group' && selectedUsers.length > 1" class="submit-button">Submit</button>
     <button @click="cancelCreation" class="cancel-button">Cancel</button>
+
+    <!-- Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal">
+        <h3>Chat Already Exists</h3>
+        <p>You already have a binome chat with this user.</p>
+        <button @click="closeModal" class="close-button">Close</button>
+      </div>
+    </div>
   </div>
 </template>
-
-<script>import { projectFirestore } from '../firebase/config';
+<script>
+import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
 import { useRouter } from 'vue-router';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-
 
 export default {
   name: 'CreateChat',
@@ -97,7 +109,8 @@ export default {
       chatType: 'group',
       group_name: '',
       text_to_send: '',
-      existingChats: []
+      existingChats: [],
+      showModal: false,
     };
   },
   setup() {
@@ -114,17 +127,21 @@ export default {
       const usersRef = projectFirestore.collection('users');
       const querySnapshot = await usersRef.get();
 
-      this.users = querySnapshot.docs.map(doc => ({
+      this.users = querySnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
 
-      this.filteredUsers = this.users.filter(user =>
+      this.filteredUsers = this.users.filter((user) =>
         user.user_name.toLowerCase().includes(this.searchTerm.toLowerCase())
       );
+
+      if (this.chatType === 'binome') {
+        await this.fetchExistingChats();
+      }
     },
     isUserSelected(userId) {
-      return this.selectedUsers.some(user => user.id === userId);
+      return this.selectedUsers.some((user) => user.id === userId);
     },
     hasExistingChat(userId) {
       return this.existingChats.includes(userId);
@@ -148,23 +165,19 @@ export default {
       }
     },
     removeChat(userId) {
-      this.selectedUsers = this.selectedUsers.filter(user => user.id !== userId);
+      this.selectedUsers = this.selectedUsers.filter((user) => user.id !== userId);
     },
     async fetchExistingChats() {
-      if (this.chatType !== 'binome') {
-        this.existingChats = [];
-        return;
-      }
-
       const creatorId = getUser().uid;
-      const existingChatsSnapshot = await projectFirestore.collection('messages_binome')
+      const existingChatsSnapshot = await projectFirestore
+        .collection('messages_binome')
         .where('participants', 'array-contains', creatorId)
         .get();
 
       this.existingChats = [];
-      existingChatsSnapshot.forEach(doc => {
+      existingChatsSnapshot.forEach((doc) => {
         const data = doc.data();
-        data.participants.forEach(participant => {
+        data.participants.forEach((participant) => {
           if (participant !== creatorId) {
             this.existingChats.push(participant);
           }
@@ -176,92 +189,101 @@ export default {
         const creatorId = getUser().uid;
 
         if (this.chatType === 'group') {
-          console.log('Creating group chat with name:', this.group_name, 'and users:', this.selectedUsers);
-
           const groupChatRef = await projectFirestore.collection('messages_group').add({
             group_name: this.group_name,
-            members: [...this.selectedUsers.map(user => user.id), creatorId],
+            members: [...this.selectedUsers.map((user) => user.id), creatorId],
             created_at: Date.now(),
             creator_id: creatorId,
             last_message_sender: creatorId,
             last_message_text: this.text_to_send,
             last_message_timestamp: Date.now(),
             last_message_viewed_by: [],
-            list_mess: [{
-              sender: creatorId,
-              text: this.text_to_send,
-              timestamp: Date.now(),
-              viewed_by: [],
-            }],
+            list_mess: [
+              {
+                sender: creatorId,
+                text: this.text_to_send,
+                timestamp: Date.now(),
+                viewed_by: [],
+              },
+            ],
           });
 
           const groupId = groupChatRef.id;
 
-          // Update each user's document to include the new group chat ID
-          for (const user of this.selectedUsers) {
+          const batch = projectFirestore.batch();
+          this.selectedUsers.forEach((user) => {
             const userRef = projectFirestore.collection('users').doc(user.id);
-            const updatedData = await userRef.get();
-            const updatedChats = updatedData.data().chats_group || [];
-            await userRef.update({
-              chats_group: [...updatedChats, groupId]
+            batch.update(userRef, {
+              chats_group: projectFirestore.FieldValue.arrayUnion(groupId),
             });
-          }
-
-          const creatorRef = projectFirestore.collection('users').doc(creatorId);
-          const creatorData = await creatorRef.get();
-          const creatorChats = creatorData.data().chats_group || [];
-          await creatorRef.update({
-            chats_group: [...creatorChats, groupId]
           });
 
-          console.log('Group chat created with ID:', groupId);
+          const creatorRef = projectFirestore.collection('users').doc(creatorId);
+          batch.update(creatorRef, {
+            chats_group: projectFirestore.FieldValue.arrayUnion(groupId),
+          });
 
-          // Send notifications to group members (excluding the creator)
-          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' + this.text_to_send, this.group_name);
+          await batch.commit();
 
+          await this.sendNotifications(
+            this.selectedUsers.map((user) => user.id),
+            'New group chat created: ' + this.text_to_send,
+            this.group_name
+          );
         } else {
           const otherUser = this.selectedUsers[0].id;
 
-          // Create a new document in the messages_binome collection
-          const binomeChatRef = await projectFirestore.collection('messages_binome').add({
-            creator_id: creatorId,
-            other_id: otherUser,
-            last_message_sender: creatorId,
-            last_message_text: this.text_to_send,
-            last_message_timestamp: Date.now(),
-            last_message_viewed: false,
-            list_mess:[{
-              sender: creatorId,
-              text: this.text_to_send,
-              timestamp: Date.now(),
-              viewed: false
-            }]
-          });
-
-          const chatId = binomeChatRef.id;
+          const otherUserRef = projectFirestore.collection('users').doc(otherUser);
+          const otherUserData = await otherUserRef.get();
+          const otherUserChats = otherUserData.data().chats_binome || [];
 
           const creatorRef = projectFirestore.collection('users').doc(creatorId);
           const creatorData = await creatorRef.get();
-          const updatedChats = creatorData.data().chats_binome || [];
-          await creatorRef.update({
-            chats_binome: [...updatedChats, chatId]
-          });
+          const creatorChats = creatorData.data().chats_binome || [];
 
-          const otherUserRef = projectFirestore.collection('users').doc(otherUser);
-          const otherUserData = await otherUserRef.get();
-          const updatedChats2 = otherUserData.data().chats_binome || [];
-          await otherUserRef.update({
-            chats_binome: [...updatedChats2, chatId]
-          });
+          // Compare chat lists
+          const commonChat = otherUserChats.some((chatId) => creatorChats.includes(chatId));
 
-          console.log('Binome chat created with ID:', chatId);
-          const creatorDoc = await projectFirestore.collection('users').doc(creatorId).get();
-          const creatorUsername = creatorDoc.data().user_name;
+          if (commonChat) {
+            this.showModal = true;
+          } else {
+            const binomeChatRef = await projectFirestore.collection('messages_binome').add({
+              creator_id: creatorId,
+              other_id: otherUser,
+              last_message_sender: creatorId,
+              last_message_text: this.text_to_send,
+              last_message_timestamp: Date.now(),
+              last_message_viewed: false,
+              list_mess: [
+                {
+                  sender: creatorId,
+                  text: this.text_to_send,
+                  timestamp: Date.now(),
+                  viewed: false,
+                },
+              ],
+            });
 
-          await this.sendNotifications([otherUser], 'New binome chat created: ' + this.text_to_send, creatorUsername);
+            const chatId = binomeChatRef.id;
+
+            await creatorRef.update({
+              chats_binome: projectFirestore.FieldValue.arrayUnion(chatId),
+            });
+
+            await otherUserRef.update({
+              chats_binome: projectFirestore.FieldValue.arrayUnion(chatId),
+            });
+
+            const creatorDoc = await creatorRef.get();
+            const creatorUsername = creatorDoc.data().user_name;
+
+            await this.sendNotifications(
+              [otherUser],
+              'New binome chat created: ' + this.text_to_send,
+              creatorUsername
+            );
+          }
         }
-
-        this.cancelCreation();
       } catch (error) {
         console.error('Error creating chat:', error);
       }
@@ -277,12 +299,11 @@ export default {
             message: message,
             chatname: chatName,
             timestamp: Date.now(),
-            status: "unread"
+            status: 'unread',
           });
 
           await userRef.update({ notifications });
         }
-        console.log('Notifications sent');
       } catch (error) {
         console.error('Error sending notifications:', error);
       }
@@ -294,88 +315,49 @@ export default {
       this.group_name = '';
       this.text_to_send = '';
       this.router.push('/WhatsappHome');
+    },
+    closeModal() {
+      this.showModal = false;
     }
   },
   created() {
     this.fetchExistingChats();
-}
-}
+  },
+};
 </script>
 <style scoped>
-/* Wrapper for the entire component */
 .create-chat-wrapper {
+  margin: 20px;
   padding: 20px;
-  background-color: #2c2c2c;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  max-width: 500px;
-  color: #fff;
+  background: #f5f5f5;
+  border-radius: 10px;
 }
 
-/* Header styles */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.header h3 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #e0e0e0;
-}
-
-/* Chat type selector styles */
 .chat-type-selector {
   display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
+  justify-content: space-around;
+  margin-bottom: 20px;
 }
 
-.chat-type-selector label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.chat-type-icon {
-  width: 40px;
-  height: 40px;
-  filter: grayscale(100%);
-}
-
-/* Search bar styles */
-.search-input {
+.search-input, .message-input {
   width: 100%;
   padding: 10px;
-  font-size: 1rem;
-  border: 1px solid #444;
-  border-radius: 24px;
-  background-color: #1c1c1c;
-  color: #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  outline: none;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
 }
 
-/* Search results styles */
 .search-results {
-  background-color: #3c3c3c;
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  margin-bottom: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 20px;
 }
 
 .search-result-item {
   display: flex;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #ddd;
 }
 
 .profile-picture {
@@ -385,127 +367,68 @@ export default {
   margin-right: 10px;
 }
 
-.username {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #e0e0e0;
+.username, .email {
   margin: 0;
-}
-
-.email {
   font-size: 0.9rem;
-  color: #b0b0b0;
-  margin: 0;
-}
-
-/* User list styles */
-.user-list {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.user-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #444;
-  background-color: #3c3c3c;
-  margin-bottom: 5px;
-  border-radius: 4px;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
 }
 
 .toggle-user-button {
-  background-color: #555;
-  color: #e0e0e0;
+  background-color: #007bff;
+  color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 24px;
+  border-radius: 5px;
+  padding: 5px 10px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  font-size: 1.2rem;
-  line-height: 1;
 }
 
 .toggle-user-button:hover {
-  background-color: #777;
+  background-color: #0056b3;
 }
 
-/* Message input styles */
-.message-input {
-  width: 100%;
-  padding: 10px;
-  font-size: 1rem;
-  border: 1px solid #444;
-  border-radius: 24px;
-  background-color: #1c1c1c;
-  color: #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  outline: none;
-  margin-top: 15px;
-}
-
-/* Selected users section styles */
-.selected-users {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: #3c3c3c;
-  border: 1px solid #444;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.selected-users h4 {
-  margin: 0 0 10px 0;
-  font-size: 1.2rem;
-  color: #e0e0e0;
-}
-
-/* Submit button styles */
-.submit-button {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  background-color: #555;
-  color: #e0e0e0;
+.submit-button, .cancel-button {
+  background-color: #007bff;
+  color: white;
   border: none;
-  border-radius: 24px;
+  border-radius: 5px;
+  padding: 10px 20px;
   cursor: pointer;
-  font-size: 1rem;
-  margin-top: 20px;
-  transition: background-color 0.3s ease;
+  margin-right: 10px;
 }
 
-.submit-button:hover {
-  background-color: #777;
+.submit-button:hover, .cancel-button:hover {
+  background-color: #0056b3;
 }
 
-.group-name {
-  margin-left: -10px;
-}
-
-/* Cancel button styles */
-.cancel-button {
-  display: block;
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 10px;
-  background-color: #444;
-  color: #e0e0e0;
-  border: none;
-  border-radius: 24px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-top: 10px;
-  transition: background-color 0.3s ease;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.cancel-button:hover {
-  background-color: #666;
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.close-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.close-button:hover {
+  background-color: #0056b3;
 }
 </style>
