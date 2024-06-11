@@ -5,11 +5,11 @@
       <div class="flex justify-around mb-4">
         <label class="flex items-center cursor-pointer">
           <input type="radio" v-model="chatType" value="group" class="hidden" />
-          <i class="bi bi-people text-2xl text-gray-700"></i>
+          <i :class="['bi bi-people text-2xl', {'text-gray-700 font-bold': chatType === 'group', 'text-gray-400': chatType !== 'group'}]" @click="chatType = 'group'"></i>
         </label>
         <label class="flex items-center cursor-pointer">
           <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" class="hidden" />
-          <i class="bi bi-person text-2xl text-gray-700"></i>
+          <i :class="['bi bi-person text-2xl', {'text-gray-700 font-bold': chatType === 'binome', 'text-gray-400': chatType !== 'binome'}]" @click="chatType = 'binome'"></i>
         </label>
       </div>
       <input
@@ -104,6 +104,8 @@
     </div>
   </div>
 </template>
+
+
 
 <script>
 import { projectFirestore } from '../firebase/config';
