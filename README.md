@@ -7,25 +7,26 @@
 
 Welcome to the Connectify! This project is designed to provide real-time messaging capabilities using modern web technologies.
 
-# Usage : Go to [Connectify](https://google.com)
+# Usage : Go to [Connectify](https://connectify-595ba.web.app/)
 
 # Demo :
-  ### Sign Up/Login :
+### VIDEO : [VID](https://github.com/xxEBxx/Chat_Application/blob/main/src/Video%20Demo/VideoGeneral.webm)
+  ## Sign Up/Login :
   screen of both of them.
-  ### Welcoming page :
+  ## Welcoming page :
   screen of it 
-  ### Joining public chats or making them:
+  ## Joining public chats or making them:
   screen
   don't want that , great we have private groupchat and private messaging
-  ### Joining public chats and talk with teh community:
+  ## Joining public chats and talk with teh community:
   screen here
-  ### Create private one on one or group chat 
+  ## Create private one on one or group chat 
   screen of them 
-  ### Where can i talk :
+  ## Where can i talk :
   screen of chats in group and solo 
-  ### How i know that people sent me a message we have a notification feature
+  ## How i know that people sent me a message we have a notification feature
   screenshot 
-  ### We also have viewed or not yet by people 
+  ## We also have viewed or not yet by people 
   
 
   
