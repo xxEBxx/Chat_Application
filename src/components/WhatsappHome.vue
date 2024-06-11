@@ -1,20 +1,24 @@
 <template>
-  <nav class="navbar professional">
-    <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
-    <p @click="goto_home" :class="{ 'active': !go }">Home</p>
-    <router-link to="/create-chat" class="nav-link">
-      Create New Chat
-    </router-link>
-    <router-link to="/signout" class="nav-link">Sign out</router-link>
-    <router-link :to="'/notification/' + userId" :class="{ 'notification-link': hasNotifications, 'full-notifications': isNotificationsFull }" class="nav-link">Notification</router-link>
-  </nav>
-  <div class="main-container">
-    <profile v-if="go" />
-    <chat v-else :user-data="userData" />
-  </div>
-  <div v-if="showPopup" class="notification-popup">
-    <p>You got a new notification</p>
-    <button @click="closePopup">Close</button>
+  <div class="min-h-screen flex flex-col bg-gray-100">
+    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+      <div class="flex space-x-4">
+        <p @click="goto_profile" :class="['cursor-pointer', go ? 'font-bold' : '']">Profile</p>
+        <p @click="goto_home" :class="['cursor-pointer', !go ? 'font-bold' : '']">Home</p>
+      </div>
+      <div class="flex space-x-4">
+        <router-link to="/create-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create New Chat</router-link>
+        <router-link to="/signout" class="hover:bg-gray-700 px-3 py-2 rounded">Sign out</router-link>
+        <router-link :to="'/notification/' + userId" :class="['hover:bg-gray-700 px-3 py-2 rounded', { 'bg-red-500': isNotificationsFull }]">Notification</router-link>
+      </div>
+    </nav>
+    <div class="flex-grow p-6">
+      <profile v-if="go" />
+      <chat v-else :user-data="userData" />
+    </div>
+    <div v-if="showPopup" class="fixed bottom-5 right-5 bg-gray-800 text-white p-4 rounded shadow-md">
+      <p>You got a new notification</p>
+      <button @click="closePopup" class="mt-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Close</button>
+    </div>
   </div>
 </template>
 
@@ -94,103 +98,6 @@ export default {
 </script>
 
 <style scoped>
-/* Navbar Styles */
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #333; /* Dark background color */
-  padding: 10px;
-  position: fixed; /* Fix the navbar at the top */
-  top: 0;
-  left: 0;
-  width: 100%; /* Full width */
-  z-index: 1000; /* Ensure the navbar is above other content */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
-}
-
-.navbar p, .navbar .nav-link, .navbar .create-chat-link {
-  color: #fff; /* White text color */
-  margin: 0 10px;
-  cursor: pointer;
-  font-family: 'Arial', sans-serif;
-  font-size: 18px;
-  text-decoration: none;
-  transition: all 0.3s ease-in-out;
-  padding: 5px 10px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
-
-.navbar p:hover, .navbar .nav-link:hover, .navbar .create-chat-link:hover {
-  color: #000; /* Text color on hover */
-  background-color: #fff; /* Background color on hover */
-  border: 1px solid #000; /* Border color on hover */
-}
-
-.active {
-  font-weight: bold;
-}
-
-.notification-link {
-  background-color: transparent; /* Remove red background */
-  color: white; /* Keep white text color */
-}
-
-.full-notifications {
-  background-color: red;
-}
-
-.professional p:first-child {
-  margin-left: 0;
-}
-
-.professional p:last-child {
-  margin-right: 0;
-}
-
-/* Main Container Adjustments */
-.main-container {
-  width: 100%;
-  margin: 0;
-  padding-top: 60px; /* Add padding to avoid content being hidden behind the navbar */
-}
-
-/* Notification Popup Styles */
-.notification-popup {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 15px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-}
-
-.notification-popup p {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-}
-
-.notification-popup button {
-  background-color: #00b09b;
-  border: none;
-  color: white;
-  padding: 10px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.notification-popup button:hover {
-  background-color: #009b85;
-}
-
 /* Additional styles for responsiveness */
 @media screen and (max-width: 600px) {
   .navbar p, .navbar .nav-link, .navbar .create-chat-link {

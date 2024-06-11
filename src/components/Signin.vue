@@ -1,36 +1,56 @@
 <template>
-  <div class="signup max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold mb-4">Sign Up</h2>
-    <form @submit.prevent="register">
-      <div class="form-group mb-4">
-        <label for="username" class="block text-gray-700 font-bold mb-2">Username</label>
-        <input type="text" id="username" v-model="username" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+  <div class="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign Up</h2>
       </div>
-      <div class="form-group mb-4">
-        <label for="email" class="block text-gray-700 font-bold mb-2">Email</label>
-        <input type="email" id="email" v-model="email" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-      </div>
-      <div class="form-group mb-4">
-        <label for="password" class="block text-gray-700 font-bold mb-2">Password</label>
-        <input type="password" id="password" v-model="password" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline">
-      </div>
-      <div class="form-group mb-6">
-        <label for="location" class="block text-gray-700 font-bold mb-2">Location</label>
-        <div class="location-input flex gap-4 items-center">
-          <select v-model="selectedCountry" @change="changeFlag" class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
-            <option v-for="(country, index) in countries" :key="index" :value="country.name">{{ country.name }}</option>
-          </select>
-          <div class="selected-flag flex-shrink-0">
-            <img :src="selectedFlag" alt="Selected Flag" class="flag-icon max-w-8">
+      <form @submit.prevent="register" class="mt-8 space-y-6">
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="username" class="sr-only">Username</label>
+            <input id="username" name="username" type="text" v-model="username" required
+                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm placeholder-center"
+                   placeholder="Username">
+          </div>
+          <div>
+            <label for="email" class="sr-only">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" v-model="email" required
+                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm placeholder-center"
+                   placeholder="Email address">
+          </div>
+          <div>
+            <label for="password" class="sr-only">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" v-model="password" required
+                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm placeholder-center"
+                   placeholder="Password">
+          </div>
+          <div>
+            <label for="location" class="sr-only">Location</label>
+            <select v-model="selectedCountry" @change="changeFlag" required
+                    class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm placeholder-center">
+              <option v-for="(country, index) in countries" :key="index" :value="country.name">{{ country.name }}</option>
+            </select>
+            <div class="selected-flag">
+              <img :src="selectedFlag" alt="Selected Flag" class="flag-icon">
+            </div>
           </div>
         </div>
-      </div>
-      <button type="submit" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4">Sign Up</button>
-      <button type="button" @click="GOOGLE()" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Sign in Using Google</button>
-    </form>
+
+        <div>
+          <button type="submit"
+                  class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+            Sign Up
+          </button>
+          <button @click="GOOGLE()"
+                  class="mt-4 group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+            Sign in Using Google
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
-  
+
 <script>
 import { setUser } from './UserState.js';
 import { signInGoogle, projectFirestore, auth } from '../firebase/config.js';
@@ -46,7 +66,7 @@ export default {
       countries: [], // Country data will be fetched dynamically
       selectedCountry: '',
       selectedFlag: '',
-      image:"https://freesvg.org/img/abstract-user-flat-4.png"
+      image: "https://freesvg.org/img/abstract-user-flat-4.png"
     };
   },
   created() {
@@ -63,7 +83,7 @@ export default {
           code: country.cca2,
           flag: country.flags.png
         }));
-        
+
         // Set default country and flag
         const defaultCountry = this.countries.find(country => country.name === this.location);
         if (defaultCountry) {
@@ -85,7 +105,7 @@ export default {
         const userCredential = await auth.createUserWithEmailAndPassword(this.email, this.password);
         this.user = userCredential.user;
         console.log(`User ID: ${this.user.uid}`);
-  
+
         const userToAdd = {
           id: this.user.uid,
           lastSignInTime: this.user.metadata.lastSignInTime,
@@ -93,14 +113,14 @@ export default {
           email: this.user.email,
           location: this.selectedCountry, // Update location to use selectedCountry
           user_name: this.username,
-          chats_binome:[],
-          chats_group:[],
-          image:this.image
+          chats_binome: [],
+          chats_group: [],
+          image: this.image
         };
-  
+
         await projectFirestore.collection('users').doc(this.user.uid).set(userToAdd);
         console.log("User added successfully with ID:", this.user.uid);
-  
+
         setUser(this.user);
         this.$router.push('/whatsappHome');
       } catch (error) {
@@ -115,14 +135,15 @@ export default {
 };
 </script>
 
-  <style scoped>
+<style scoped>
 .signup {
-  max-width: 300px;
+  max-width: 400px;
   margin: auto;
   margin-top: 50px;
   padding: 20px;
-  border: 1px solid #ccc;
   border-radius: 5px;
+  background-color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
@@ -140,17 +161,13 @@ select {
   width: 100%;
   padding: 5px;
   font-size: 16px;
-}
-
-select {
-  margin-left: 10px;
+  text-align: center; /* Center the text */
 }
 
 button {
   display: block;
   width: 100%;
   padding: 10px;
-  background-color: #28a745;
   color: #fff;
   border: none;
   border-radius: 5px;
@@ -158,34 +175,24 @@ button {
 }
 
 button:hover {
-  background-color: #218838;
+  opacity: 0.9;
 }
 
 .location-input {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 10px;
-}
-
-.location-input input[type="text"] {
-  flex: 1;
-}
-
-.location-input select {
-  flex: 1;
-}
-
-.dietary-checkboxes {
-  display: flex;
-  flex-wrap: wrap; /* Allow checkboxes to wrap on multiple lines */
-}
-
-.dietary-checkboxes label {
-  margin-right: 10px; /* Add spacing between checkboxes */
 }
 
 .flag-icon {
   max-width: 30px; /* Set maximum width for flag icons */
+  margin: auto;
+  display: block;
+  align-self: center;
+}
+
+.placeholder-center::placeholder {
+  text-align: center; /* Center the placeholder text */
 }
 </style>
-  
-  

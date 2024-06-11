@@ -80,8 +80,7 @@
   </div>
 </template>
 
-<script>
-import { projectFirestore } from '../firebase/config';
+<script>import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
 import { useRouter } from 'vue-router';
 
@@ -197,31 +196,26 @@ export default {
           const groupId = groupChatRef.id;
 
           // Update each user's document to include the new group chat ID
-          const batch = projectFirestore.batch();
-          this.selectedUsers.forEach(async (user) => {
+          for (const user of this.selectedUsers) {
             const userRef = projectFirestore.collection('users').doc(user.id);
             const updatedData = await userRef.get();
             const updatedChats = updatedData.data().chats_group || [];
-            const toAddChats = [...updatedChats, groupId];
-            batch.update(userRef, {
-              chats_group: toAddChats
+            await userRef.update({
+              chats_group: [...updatedChats, groupId]
             });
-          });
+          }
 
           const creatorRef = projectFirestore.collection('users').doc(creatorId);
           const creatorData = await creatorRef.get();
           const creatorChats = creatorData.data().chats_group || [];
-          const toAddCreatorChats = [...creatorChats, groupId];
-          batch.update(creatorRef, {
-            chats_group: toAddCreatorChats
+          await creatorRef.update({
+            chats_group: [...creatorChats, groupId]
           });
-
-          await batch.commit();
 
           console.log('Group chat created with ID:', groupId);
 
           // Send notifications to group members (excluding the creator)
-          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' +this.text_to_send,this.group_name);
+          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' + this.text_to_send, this.group_name);
 
         } else {
           const otherUser = this.selectedUsers[0].id;
@@ -244,28 +238,25 @@ export default {
 
           const chatId = binomeChatRef.id;
 
-          const updated_data=await projectFirestore.collection('users').doc(creatorId).get();
-          const updated_chats=updated_data.data().chats_binome;
-          const to_add_chats=[...updated_chats,chatId];
-          
-          await projectFirestore.collection('users').doc(creatorId).update({
-            chats_binome:to_add_chats
+          const creatorRef = projectFirestore.collection('users').doc(creatorId);
+          const creatorData = await creatorRef.get();
+          const updatedChats = creatorData.data().chats_binome || [];
+          await creatorRef.update({
+            chats_binome: [...updatedChats, chatId]
           });
 
-          const updated_data2=await projectFirestore.collection('users').doc(otherUser).get();
-          const updated_chats2=updated_data2.data().chats_binome;
-          const to_add_chats2=[...updated_chats2,chatId];
-
-          await projectFirestore.collection('users').doc(otherUser).update({
-            chats_binome:to_add_chats2
+          const otherUserRef = projectFirestore.collection('users').doc(otherUser);
+          const otherUserData = await otherUserRef.get();
+          const updatedChats2 = otherUserData.data().chats_binome || [];
+          await otherUserRef.update({
+            chats_binome: [...updatedChats2, chatId]
           });
 
           console.log('Binome chat created with ID:', chatId);
           const creatorDoc = await projectFirestore.collection('users').doc(creatorId).get();
           const creatorUsername = creatorDoc.data().user_name;
 
-        
-          await this.sendNotifications([otherUser], 'New binome chat created'+this.text_to_send, creatorUsername);
+          await this.sendNotifications([otherUser], 'New binome chat created: ' + this.text_to_send, creatorUsername);
         }
 
         this.cancelCreation();
@@ -275,7 +266,6 @@ export default {
     },
     async sendNotifications(userIds, message, chatName) {
       try {
-        const batch = projectFirestore.batch();
         for (const userId of userIds) {
           const userRef = projectFirestore.collection('users').doc(userId);
           const userDoc = await userRef.get();
@@ -288,9 +278,8 @@ export default {
             status: false
           });
 
-          batch.update(userRef, { notifications });
+          await userRef.update({ notifications });
         }
-        await batch.commit();
         console.log('Notifications sent');
       } catch (error) {
         console.error('Error sending notifications:', error);
@@ -307,8 +296,8 @@ export default {
   },
   created() {
     this.fetchExistingChats();
-  }
-};
+}
+}
 </script>
 <style scoped>
 /* Wrapper for the entire component */
@@ -518,4 +507,3 @@ export default {
   background-color: #666;
 }
 </style>
-

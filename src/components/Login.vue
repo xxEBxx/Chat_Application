@@ -1,17 +1,33 @@
 <template>
-  <div class="login max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold mb-4">Login</h2>
-    <form @submit.prevent="login">
-      <div class="form-group mb-4">
-        <label for="username" class="block text-gray-700 font-bold mb-2">E-mail</label>
-        <input type="text" id="username" v-model="email" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+  <div class="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Login</h2>
       </div>
-      <div class="form-group mb-6">
-        <label for="password" class="block text-gray-700 font-bold mb-2">Password</label>
-        <input type="password" id="password" v-model="password" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline">
-      </div>
-      <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Login</button>
-    </form>
+      <form @submit.prevent="login" class="mt-8 space-y-6">
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="username" class="sr-only">E-mail</label>
+            <input id="username" name="username" type="text" autocomplete="email" v-model="email" required
+                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                   placeholder="Email address">
+          </div>
+          <div>
+            <label for="password" class="sr-only">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" v-model="password" required
+                   class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                   placeholder="Password">
+          </div>
+        </div>
+
+        <div>
+          <button type="submit"
+                  class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Login
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -36,7 +52,7 @@ export default {
           setUser(null);
           console.log("User is signed out");
         }
-      });
+      })
     },
     async login() {
       try {
@@ -44,57 +60,20 @@ export default {
         this.user = userCredential.user;
         console.log(`User ID: ${this.user.uid}`);
         setUser(this.user);
-        
+
         await projectFirestore.collection('users').doc(this.user.uid).update({
           connected: true
         });
 
-        this.$router.push('/whatsappHome'); 
+        this.$router.push('/whatsappHome');
       } catch (error) {
         alert(`Login failed: ${error.message}`);
       }
     }
   }
-};
+}
 </script>
-  
-  <style scoped>
-  .login {
-    max-width: 300px;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-  }
-  
-  .form-group {
-    margin-bottom: 10px;
-  }
-  
-  label {
-    display: block;
-  }
-  
-  input[type="text"],
-  input[type="password"] {
-    width: 100%;
-    padding: 5px;
-    font-size: 16px;
-  }
-  
-  button {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  </style>
-  
+
+<style scoped>
+/* Custom styles if needed */
+</style>
