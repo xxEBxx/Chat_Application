@@ -12,14 +12,16 @@
     <profile v-if="go" />
     <chat v-else :user-data="userData" />
   </div>
+  <div v-if="showPopup" class="notification-popup">
+    <p>You got a new notification</p>
+    <button @click="closePopup">Close</button>
+  </div>
 </template>
 
 <script>
 import { auth, projectFirestore } from '@/firebase/config.js'; // Adjusted import for simplicity
 import profile from "@/components/profile.vue";
 import chat from "@/components/Home.vue";
-import Toastify from 'toastify-js';
-import "toastify-js/src/toastify.css";
 
 export default {
   name: "whatsappHome",
@@ -32,12 +34,11 @@ export default {
       unsubscribeUserData: null,
       hasNotifications: true,
       isNotificationsFull: false,
-      toastContainer: null, // Add this line
+      showPopup: false,
     };
   },
   created() {
     this.fetchUserData();
-    this.createToastContainer(); // Add this line
   },
   methods: {
     goto_profile() {
@@ -63,10 +64,6 @@ export default {
         console.log("No user is signed in.");
       }
     },
-    createToastContainer() {
-      this.toastContainer = document.createElement('div');
-      document.body.appendChild(this.toastContainer);
-    },
     checkNotifications() {
       if (this.userData.notifications && this.userData.notifications.length > 0) {
         this.hasNotifications = true;
@@ -77,34 +74,20 @@ export default {
         this.isNotificationsFull = newNotification;
 
         if (newNotification) {
-          // Clear any existing toasts in the container
-          while (this.toastContainer.firstChild) {
-            this.toastContainer.removeChild(this.toastContainer.firstChild);
-          }
-
-          Toastify({
-            text: "You got a new notification",
-            duration: 5000, // 5 seconds duration
-            gravity: 'bottom', // Display at the bottom
-            position: 'right', // Display on the right
-            backgroundColor: 'linear-gradient(to right, #00b09b, #96c93d)',
-            stopOnFocus: true,
-            className: 'toast-custom',
-            node: this.toastContainer // Append toast to custom container
-          }).showToast();
+          this.showPopup = true;
         }
       } else {
         this.hasNotifications = false;
         this.isNotificationsFull = false;
       }
+    },
+    closePopup() {
+      this.showPopup = false;
     }
   },
   beforeDestroy() {
     if (this.unsubscribeUserData) {
       this.unsubscribeUserData();
-    }
-    if (this.toastContainer) {
-      this.toastContainer.remove(); // Remove the custom toast container on component destroy
     }
   }
 };
@@ -171,6 +154,41 @@ export default {
   width: 100%;
   margin: 0;
   padding-top: 60px; /* Add padding to avoid content being hidden behind the navbar */
+}
+
+/* Notification Popup Styles */
+.notification-popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333;
+  color: #fff;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.notification-popup p {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+}
+
+.notification-popup button {
+  background-color: #00b09b;
+  border: none;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.notification-popup button:hover {
+  background-color: #009b85;
 }
 
 /* Additional styles for responsiveness */
