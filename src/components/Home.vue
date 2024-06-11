@@ -100,8 +100,14 @@ export default {
       }
     }, { immediate: true });
 
-    const reverseChatIds = computed(() => chatIds.value.slice().reverse());
-
+    const reverseChatIds = computed(() => {
+      return chatIds.value.slice().sort((a, b) => {
+        const chatA = chats[a];
+        const chatB = chats[b];
+        if (!chatA || !chatB) return 0;
+        return chatB.last_message_timestamp - chatA.last_message_timestamp;
+      });
+    });
     const selectChatType = async (type) => {
       selectedChatType.value = type;
       setupChatListListener();
