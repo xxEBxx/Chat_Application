@@ -1,20 +1,32 @@
-# chat_app
+# Chat Application (Connectify)
+  ![Node.js](https://img.shields.io/badge/Node.js-35495E?style=for-the-badge&logo=node.js&logoColor=4FC08D)
+   ![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vue.js&logoColor=4FC08D)
+   ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)
+   ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+   ![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
 
-## Project setup
-```
-npm install
-```
+Welcome to the Connectify! This project is designed to provide real-time messaging capabilities using modern web technologies.
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+# Usage : Go to [Connectify](https://google.com)
 
-### Compiles and minifies for production
-```
-npm run build
-```
+# Demo :
+  ### Sign Up/Login :
+  screen of both of them.
+  ### Welcoming page :
+  screen of it 
+  ### Joining public chats or making them:
+  screen
+  don't want that , great we have private groupchat and private messaging
+  ### Joining public chats and talk with teh community:
+  screen here
+  ### Create private one on one or group chat 
+  screen of them 
+  ### Where can i talk :
+  screen of chats in group and solo 
+  ### How i know that people sent me a message we have a notification feature
+  screenshot 
+  ### We also have viewed or not yet by people 
+  
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
-"# Chat_Application" 
+  
+  
