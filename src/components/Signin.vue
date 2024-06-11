@@ -41,10 +41,7 @@
                   class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
             Sign Up
           </button>
-          <button @click="GOOGLE()"
-                  class="mt-4 group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-            Sign in Using Google
-          </button>
+          
         </div>
       </form>
     </div>
@@ -127,10 +124,6 @@ export default {
       } catch (error) {
         console.error("Error creating user:", error);
       }
-    },
-    GOOGLE() {
-      signInGoogle();
-      this.$router.push('/welcoming');
     }
   }
 };
