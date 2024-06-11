@@ -1,41 +1,43 @@
 <template>
-  <div id="app">
-    <div class="container">
-      <div class="chat-list">
-        <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
-        <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
+  <div id="app" class="min-h-screen flex flex-col bg-gray-100">
+    <div class="container mx-auto p-6 flex flex-col lg:flex-row">
+      <div class="chat-list w-full lg:w-1/3 bg-white rounded-lg shadow-md p-4 space-y-4">
+        <div class="flex space-x-2 mb-4">
+          <button @click="selectChatType('solo')" :class="{ 'bg-gray-800 text-white': selectedChatType === 'solo' }" class="flex-1 py-2 rounded text-center font-semibold transition duration-300 ease-in-out hover:bg-gray-700">Solo Chats</button>
+          <button @click="selectChatType('group')" :class="{ 'bg-gray-800 text-white': selectedChatType === 'group' }" class="flex-1 py-2 rounded text-center font-semibold transition duration-300 ease-in-out hover:bg-gray-700">Group Chats</button>
+        </div>
         <div v-if="selectedChatType === 'solo'">
-          <h2>Solo Chats</h2>
-          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
-            <div @click="change_cred('binome', chatId)">
-              <img :src="getChatDisplayimg(chats[chatId])" alt="Profile Picture" class="profile-picture" />
-              <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
-              <p v-if="getLastMessage_text(chatId)">
+          <h2 class="text-xl font-bold mt-4">Solo Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item p-4 bg-gray-100 rounded-lg shadow-sm transition duration-300 ease-in-out hover:bg-gray-200 cursor-pointer" @click="change_cred('binome', chatId)">
+            <img :src="getChatDisplayimg(chats[chatId])" alt="Profile Picture" class="profile-picture w-10 h-10 rounded-full mr-4">
+            <div class="flex-1">
+              <h3 class="font-semibold">{{ getChatDisplayName(chats[chatId]) }}</h3>
+              <p class="text-sm text-gray-600" v-if="getLastMessage_text(chatId)">
                 Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
               </p>
             </div>
           </div>
         </div>
         <div v-if="selectedChatType === 'group'">
-          <h2>Group Chats</h2>
-          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
-            <div @click="change_cred('group', chatId)">
-              <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
-              <p v-if="getLastMessage_text(chatId)">
-                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
-              </p>
-            </div>
+          <h2 class="text-xl font-bold mt-4">Group Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item p-4 bg-gray-100 rounded-lg shadow-sm transition duration-300 ease-in-out hover:bg-gray-200 cursor-pointer" @click="change_cred('group', chatId)">
+            <h3 class="font-semibold" v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
+            <p class="text-sm text-gray-600" v-if="getLastMessage_text(chatId)">
+              Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+            </p>
           </div>
         </div>
       </div>
       
-      <div class="chat-details">
+      <div class="chat-details flex-1 mt-6 lg:mt-0 lg:ml-6 bg-white rounded-lg shadow-md p-4">
         <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
         <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
       </div>
     </div>
   </div>
 </template>
+
+
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
@@ -95,7 +97,6 @@ export default {
 
     const watchUserData = watch(() => props.userData, (newVal) => {
       if (newVal) {
-        console.log('userData is available', newVal);
         setupChatListListener();
       }
     }, { immediate: true });
@@ -291,16 +292,12 @@ export default {
   }
 };
 </script>
+
 <style scoped>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #2c3e50;
-  margin-top: 30px;
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
 }
 
 .button-container {
@@ -330,32 +327,19 @@ button.active, button:hover {
   transform: scale(1.05);
 }
 
-.container {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  width: 100%;
-}
-
 .chat-list {
   margin: 0;
-  width: 30%;
-  height: 100%;
   text-align: left;
-  padding: 10px;
-  border-right: 1px solid #ddd;
-  background-color: #f9f9f9;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .chat-item {
+  display: flex;
+  align-items: center;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 5px;
-  margin: 10px 0;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  background-color: white;
 }
 
 .chat-item:hover {
@@ -364,38 +348,8 @@ button.active, button:hover {
 
 .chat-details {
   height: 100%;
-  width: 70%;
   padding: 10px;
   overflow-y: auto;
-  background-color: #f9f9f9;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-}
-
-.message-item {
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 10px;
-  background-color: #e1ffc7;
-  max-width: 80%;
-  text-align: left;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
-}
-
-.message-item p {
-  margin: 0;
-}
-
-.message-item.sent {
-  background-color: #d1e7ff;
-  margin-left: auto;
-  text-align: right;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
 }
 
 .profile-picture {
@@ -405,51 +359,7 @@ button.active, button:hover {
   margin-right: 10px;
 }
 
-.input-container {
-  display: flex;
-  margin-top: 10px;
-}
-
-.message-input {
-  flex-grow: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  outline: none;
-}
-
-.message-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-}
-
-.send-button {
-  padding: 10px 15px;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-.send-button:hover {
-  background-color: #0056b3;
-}
-
 .create-chat-link {
   text-decoration: none;
-}
-
-h2 {
-  color: #333;
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-h3 {
-  color: #555;
-  font-size: 20px;
-  margin-bottom: 5px;
 }
 </style>
