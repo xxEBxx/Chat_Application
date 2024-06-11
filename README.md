@@ -12,21 +12,15 @@ Welcome to the Connectify! This project is designed to provide real-time messagi
 # Demo :
 ### VIDEO : [VID](https://github.com/xxEBxx/Chat_Application/blob/main/src/Video%20Demo/VideoGeneral.webm)
   ## Sign Up/Login :
-  screen of both of them.
+  ![pic](https://github.com/xxEBxx/Chat_Application/blob/main/readme_pictures/SignUp.jpg)
+  ![pic](https://github.com/xxEBxx/Chat_Application/blob/main/readme_pictures/Login.jpg)
   ## Welcoming page :
-  screen of it 
-  ## Joining public chats or making them:
-  screen
-  don't want that , great we have private groupchat and private messaging
-  ## Joining public chats and talk with teh community:
-  screen here
-  ## Create private one on one or group chat 
-  screen of them 
-  ## Where can i talk :
-  screen of chats in group and solo 
-  ## How i know that people sent me a message we have a notification feature
-  screenshot 
-  ## We also have viewed or not yet by people 
+![pic](https://github.com/xxEBxx/Chat_Application/blob/main/readme_pictures/Welcome_page.jpg)  
+## Joining public chats or making them:
+  ![pic](https://github.com/xxEBxx/Chat_Application/blob/main/readme_pictures/AddpublicChat.jpg)
+  ## Talking in Chats :
+  ![pic](https://github.com/xxEBxx/Chat_Application/blob/main/readme_pictures/Conversation.jpg)
+
   
 
   
