@@ -7,7 +7,7 @@
 
 Welcome to the Connectify! This project is designed to provide real-time messaging capabilities using modern web technologies.
 
-# Usage : Go to [Connectify]([https://google.com](https://connectify-595ba.web.app/)
+# Usage : Go to [Connectify](https://connectify-595ba.web.app/)
 
 # Demo :
 ### VIDEO : [VID](https://github.com/xxEBxx/Chat_Application/blob/main/src/Video%20Demo/VideoGeneral.webm)
