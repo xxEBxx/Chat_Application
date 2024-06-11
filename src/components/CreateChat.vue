@@ -275,7 +275,7 @@ export default {
             message: message,
             chatname: chatName,
             timestamp: Date.now(),
-            status: false
+            status: "unread"
           });
 
           await userRef.update({ notifications });

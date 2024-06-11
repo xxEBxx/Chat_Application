@@ -4,10 +4,10 @@
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <div v-if="message.sender !== currentUser.uid" class="message-header">
         <router-link :to="'/profile_other/' + message.sender">
-        <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+          <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
         </router-link>
         <router-link :to="'/profile_other/' + message.sender">
-        <p><strong>{{ getUserName(message.sender) }}</strong></p>
+          <p><strong>{{ getUserName(message.sender) }}</strong></p>
         </router-link>
       </div>
       <p>{{ message.text }}</p>
@@ -23,12 +23,11 @@
     </div>
   </div>
 </template>
-
 <script>
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted, watch } from 'vue';
-import {useRouter} from 'vue-router';
+import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
 export default {
   name: 'ChatDetailsGrp',
@@ -45,8 +44,10 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('');
+    const chatContainer = ref(null);
     let unsubscribe = null;
-    const router= useRouter();
+    let unsubscribeActivity = null;
+    const router = useRouter();
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -60,20 +61,14 @@ export default {
       }
     };
 
-    const passToAdmin = ()=>{
-     
-        if(currentUser.uid===chat.value.creator_id){
-          const routeParams = {
-          chatId: props.id
-        };
-        const routeOptions = {
-          name: 'AdminControls',
-          params: routeParams
-        };
+    const passToAdmin = () => {
+      if (currentUser.uid === chat.value.creator_id) {
+        const routeParams = { chatId: props.id };
+        const routeOptions = { name: 'AdminControls', params: routeParams };
         router.push(routeOptions);
       }
     };
-    
+
     const subscribeToMessages = () => {
       if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -81,10 +76,51 @@ export default {
         if (chatDoc.exists) {
           messages.value = chatDoc.data().list_mess || [];
           messages.value.forEach(message => fetchUser(message.sender));
+          // Mark messages as viewed if the chat is visible and scrolled to the bottom
+          if (document.visibilityState === 'visible' && isScrolledToBottom()) {
+            markMessagesAsViewed(messages.value);
+          }
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
       });
+    };
+
+    const subscribeToUserActivity = () => {
+      if (unsubscribeActivity) unsubscribeActivity(); // Unsubscribe from previous activity tracking
+      const activityRef = projectFirestore.collection('user_activity').doc(props.id);
+      unsubscribeActivity = activityRef.onSnapshot(activityDoc => {
+        if (activityDoc.exists) {
+          const userActivity = activityDoc.data() || {};
+          if (areAllUsersActive(userActivity)) {
+            markMessagesAsViewed(messages.value);
+          }
+        } else {
+          console.error(`No activity found for chat id: ${props.id}`);
+        }
+      });
+    };
+
+    const areAllUsersActive = (userActivity) => {
+      return chat.value.members.every(member => userActivity[member]?.active);
+    };
+
+    const markMessagesAsViewed = async (messagesList) => {
+      const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+      const updatedMessages = [];
+      let needToUpdate = false;
+
+      for (const message of messagesList) {
+        if (message.sender !== currentUser.uid && !message.viewed) {
+          message.viewed = true;
+          needToUpdate = true;
+        }
+        updatedMessages.push(message);
+      }
+
+      if (needToUpdate) {
+        await chatRef.update({ list_mess: updatedMessages });
+      }
     };
 
     const fetchUsers = async (userIds) => {
@@ -117,50 +153,49 @@ export default {
     };
 
     const addNotification = async (userId, messageText, groupName) => {
-  const userRef = projectFirestore.collection('users').doc(userId);
-  const userDoc = await userRef.get();
-  if (userDoc.exists) {
-    const notifications = userDoc.data().notifications || [];
-    notifications.push({ status: 'unread', username:groupName ,text: messageText, timestamp: Date.now() });
-    await userRef.update({ notifications });
-  } else {
-    console.error(`No user found with id: ${userId}`);
-  }
-};
-
-const sendMessage = async () => {
-  if (newMessage.value.trim()) {
-    const message = {
-      sender: currentUser.uid,
-      text: newMessage.value,
-      timestamp: Date.now(),
-      viewed: false
-    };
-    const chatRef = projectFirestore.collection('messages_group').doc(props.id);
-    const chatDoc = await chatRef.get();
-    if (chatDoc.exists) {
-      const currentMessages = chatDoc.data().list_mess || [];
-      currentMessages.push(message);
-      await chatRef.update({
-        last_message_sender: currentUser.uid,
-        last_message_text: newMessage.value,
-        last_message_timestamp: Date.now(),
-        last_message_viewed: false,
-        list_mess: currentMessages
-      });
-
-      const groupMembers = chat.value.members.filter(member => member !== currentUser.uid);
-      for (const memberId of groupMembers) {
-        await addNotification(memberId, message.text, chatTitle.value);
+      const userRef = projectFirestore.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        const notifications = userDoc.data().notifications || [];
+        notifications.push({ status: 'unread', username: groupName, message: messageText, timestamp: Date.now() });
+        await userRef.update({ notifications });
+      } else {
+        console.error(`No user found with id: ${userId}`);
       }
+    };
 
-      newMessage.value = '';
-    } else {
-      console.error(`No chat found with id: ${props.id}`);
-    }
-  }
-};
+    const sendMessage = async () => {
+      if (newMessage.value.trim()) {
+        const message = {
+          sender: currentUser.uid,
+          text: newMessage.value,
+          timestamp: Date.now(),
+          viewed: false
+        };
+        const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const currentMessages = chatDoc.data().list_mess || [];
+          currentMessages.push(message);
+          await chatRef.update({
+            last_message_sender: currentUser.uid,
+            last_message_text: newMessage.value,
+            last_message_timestamp: Date.now(),
+            last_message_viewed: false,
+            list_mess: currentMessages
+          });
 
+          const groupMembers = chat.value.members.filter(member => member !== currentUser.uid);
+          for (const memberId of groupMembers) {
+            await addNotification(memberId, message.text, chatTitle.value);
+          }
+
+          newMessage.value = '';
+        } else {
+          console.error(`No chat found with id: ${props.id}`);
+        }
+      }
+    };
 
     const formatTimestamp = (timestamp) => {
       if (!timestamp) return 'Loading...';
@@ -179,14 +214,56 @@ const sendMessage = async () => {
       return message.viewed;
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isScrolledToBottom()) {
+        markMessagesAsViewed(messages.value);
+      }
+    };
+
+    const handleScroll = () => {
+      if (isScrolledToBottom() && document.visibilityState === 'visible') {
+        markMessagesAsViewed(messages.value);
+      }
+    };
+
+    const isScrolledToBottom = () => {
+      const el = chatContainer.value;
+      return el.scrollHeight - el.scrollTop === el.clientHeight;
+    };
+
+    const setUserActivity = async (active) => {
+      const activityRef = projectFirestore.collection('user_activity').doc(props.id);
+      await activityRef.set({
+        [currentUser.uid]: {
+          active,
+          timestamp: Date.now()
+        }
+      }, { merge: true });
+    };
+
     onMounted(async () => {
       await fetchChatDetails();
       subscribeToMessages();
+      subscribeToUserActivity();
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      chatContainer.value.addEventListener('scroll', handleScroll);
+      setUserActivity(true); // Mark user as active
+    });
+
+    onUnmounted(() => {
+      if (unsubscribe) unsubscribe();
+      if (unsubscribeActivity) unsubscribeActivity();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (chatContainer.value) {
+        chatContainer.value.removeEventListener('scroll', handleScroll);
+      }
+      setUserActivity(false); // Mark user as inactive
     });
 
     watch(() => props.id, async (newId) => {
       await fetchChatDetails();
       subscribeToMessages();
+      subscribeToUserActivity();
     });
 
     return {
@@ -200,7 +277,8 @@ const sendMessage = async () => {
       isMessageFullyViewed,
       currentUser,
       chatTitle,
-      passToAdmin
+      passToAdmin,
+      chatContainer
     };
   }
 };

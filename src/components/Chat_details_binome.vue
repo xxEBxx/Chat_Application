@@ -1,32 +1,30 @@
 <template>
-  <div class="chat-details" @scroll="handleScroll">
-    <h2>{{ chatTitle }}</h2>
+  <div ref="chatContainer" class="chat-details" @scroll="handleScroll">
+    <h2 class="text-xl font-bold">{{ chatTitle }}</h2>
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
-      <div v-if="message.sender !== currentUser.uid" class="message-header">
+      <div v-if="message.sender !== currentUser.uid" class="message-header flex items-center">
         <router-link :to="'/profile_other/' + message.sender">
-          <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+          <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture w-10 h-10 rounded-full mr-2" />
         </router-link>
         <router-link :to="'/profile_other/' + message.sender">
           <p><strong>{{ getUserName(message.sender) }}</strong></p>
         </router-link>
       </div>
-      <p>{{ message.text }}</p>
-      <small>{{ formatTimestamp(message.timestamp) }}</small>
+      <p class="mt-2">{{ message.text }}</p>
+      <small class="text-gray-500">{{ formatTimestamp(message.timestamp) }}</small>
       <small v-if="currentUser.uid === message.sender">
-        <i :class="message.viewed ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
+        <i :class="message.viewed ? 'fas fa-check-double text-blue-500' : 'fas fa-check'"></i>
       </small>
     </div>
-    <div class="input-container">
-      <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
-      <button @click="sendMessage" class="send-button">Send</button>
+    <div class="input-container flex mt-4">
+      <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input flex-grow p-2 border rounded border-gray-300 focus:outline-none focus:ring focus:border-blue-300">
+      <button @click="sendMessage" class="send-button ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
     </div>
   </div>
 </template>
-
-<script>
-import { projectFirestore } from '@/firebase/config.js';
+<script>import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
-import { reactive, ref, onMounted, watch } from 'vue';
+import { reactive, ref, onMounted, onUnmounted, watch } from 'vue';
 
 export default {
   name: 'Chat_detail_binome',
@@ -43,6 +41,7 @@ export default {
     const currentUser = firebase.auth().currentUser;
     const chat = ref({});
     const chatTitle = ref('Loading...');
+    const chatContainer = ref(null);
     let unsubscribe = null;
 
     const fetchChatDetails = async () => {
@@ -65,27 +64,40 @@ export default {
         if (chatDoc.exists) {
           const messagesList = chatDoc.data().list_mess || [];
           const updatedMessages = [];
-          const batch = projectFirestore.batch();
-          let needToUpdate = false;
 
           for (const message of messagesList) {
             fetchUser(message.sender);
-            if (message.sender !== currentUser.uid && !message.viewed) {
-              message.viewed = true;
-              needToUpdate = true;
-            }
             updatedMessages.push(message);
           }
 
-          if (needToUpdate) {
-            await chatRef.update({ list_mess: updatedMessages });
-          }
-
           messages.value = updatedMessages;
+
+          // Mark messages as viewed if the chat is visible and scrolled to the bottom
+          if (document.visibilityState === 'visible' && isScrolledToBottom()) {
+            markMessagesAsViewed(updatedMessages);
+          }
         } else {
           console.error(`No chat found with id: ${props.id}`);
         }
       });
+    };
+
+    const markMessagesAsViewed = async (messagesList) => {
+      const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
+      const updatedMessages = [];
+      let needToUpdate = false;
+
+      for (const message of messagesList) {
+        if (message.sender !== currentUser.uid && !message.viewed) {
+          message.viewed = true;
+          needToUpdate = true;
+        }
+        updatedMessages.push(message);
+      }
+
+      if (needToUpdate) {
+        await chatRef.update({ list_mess: updatedMessages });
+      }
     };
 
     const fetchUser = async (userId) => {
@@ -125,7 +137,7 @@ export default {
       const userDoc = await userRef.get();
       if (userDoc.exists) {
         const notifications = userDoc.data().notifications || [];
-        notifications.push({ status: 'unread', username: senderName, text: messageText, timestamp: Date.now() });
+        notifications.push({ status: 'unread', username: senderName, message: messageText, timestamp: Date.now() });
         await userRef.update({ notifications });
       } else {
         console.error('User does not exist');
@@ -175,9 +187,36 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isScrolledToBottom()) {
+        markMessagesAsViewed(messages.value);
+      }
+    };
+
+    const handleScroll = () => {
+      if (isScrolledToBottom() && document.visibilityState === 'visible') {
+        markMessagesAsViewed(messages.value);
+      }
+    };
+
+    const isScrolledToBottom = () => {
+      const el = chatContainer.value;
+      return el.scrollHeight - el.scrollTop === el.clientHeight;
+    };
+
     onMounted(async () => {
       await fetchChatDetails();
       subscribeToMessages();
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      chatContainer.value.addEventListener('scroll', handleScroll);
+    });
+
+    onUnmounted(() => {
+      if (unsubscribe) unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (chatContainer.value) {
+        chatContainer.value.removeEventListener('scroll', handleScroll);
+      }
     });
 
     watch(() => props.id, async (newId) => {
@@ -195,7 +234,8 @@ export default {
       sendMessage,
       formatTimestamp,
       currentUser,
-      chatTitle
+      chatTitle,
+      chatContainer
     };
   }
 };
