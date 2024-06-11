@@ -1,16 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-100">
-    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
-      <div class="flex space-x-4">
-        <p @click="goto_profile" :class="['cursor-pointer', go ? 'font-bold' : '']">Profile</p>
-        <p @click="goto_home" :class="['cursor-pointer', !go ? 'font-bold' : '']">Home</p>
-      </div>
-      <div class="flex space-x-4">
-        <router-link to="/create-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create New Chat</router-link>
-        <router-link to="/signout" class="hover:bg-gray-700 px-3 py-2 rounded">Sign out</router-link>
-        <router-link :to="'/notification/' + userId" :class="['hover:bg-gray-700 px-3 py-2 rounded', { 'bg-red-500': isNotificationsFull }]">Notification</router-link>
-      </div>
-    </nav>
     <div class="container mx-auto p-6">
       <h1 class="text-3xl font-bold mb-6">Profile</h1>
       <div v-if="userData" class="bg-white p-6 rounded-lg shadow-md">
