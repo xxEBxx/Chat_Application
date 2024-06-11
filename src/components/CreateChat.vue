@@ -197,6 +197,7 @@ export default {
             created_at: Date.now(),
             creator_id: creatorId,
             last_message_sender: creatorId,
+            public:false,
             last_message_text: this.text_to_send,
             last_message_timestamp: Date.now(),
             last_message_viewed_by: [],
@@ -263,6 +264,7 @@ export default {
               last_message_text: this.text_to_send,
               last_message_timestamp: Date.now(),
               last_message_viewed: false,
+              
               list_mess: [
                 {
                   sender: creatorId,

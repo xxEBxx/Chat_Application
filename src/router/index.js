@@ -9,6 +9,8 @@ import CreateChat from '@/components/CreateChat.vue';
 import ProfileOther from '@/views/ProfileOther.vue'
 import notification from '../components/notification.vue';
 import AdminControls from '@/components/AdminControls.vue';
+import CreateGroupChat from '@/components/CreateGroupChat.vue';
+import PublicShow from '@/components/PublicShow.vue';
 
 
 const routes = [
@@ -59,7 +61,18 @@ const routes = [
     name: 'AdminControls',
     component: AdminControls,
     props: true
-  }
+  },
+  {
+    path: '/create-group-chat',
+    name: 'CreateGroupChat',
+    component: CreateGroupChat,
+ 
+  },{
+  path: '/public-groups',
+  name: 'PublicShow',
+  component: PublicShow,
+},
+
 ];
 
 const router = createRouter({

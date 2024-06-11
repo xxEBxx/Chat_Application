@@ -6,8 +6,10 @@
         <p @click="goto_home" :class="['cursor-pointer', !go ? 'font-bold' : '']">Home</p>
       </div>
       <div class="flex space-x-4">
+        <router-link to="/public-groups" class="hover:bg-gray-700 px-3 py-2 rounded">Public Chat</router-link>
         <router-link to="/create-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create New Chat</router-link>
         <router-link to="/signout" class="hover:bg-gray-700 px-3 py-2 rounded">Sign out</router-link>
+        <router-link to="/create-group-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create public group</router-link>
         <router-link :to="'/notification/' + userId" :class="['hover:bg-gray-700 px-3 py-2 rounded', { 'bg-red-500': isNotificationsFull }]">Notification</router-link>
       </div>
     </nav>
