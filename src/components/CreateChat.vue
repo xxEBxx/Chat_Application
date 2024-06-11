@@ -92,6 +92,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
@@ -189,6 +190,7 @@ export default {
         const creatorId = getUser().uid;
 
         if (this.chatType === 'group') {
+          console.log("Creating group chat...");
           const groupChatRef = await projectFirestore.collection('messages_group').add({
             group_name: this.group_name,
             members: [...this.selectedUsers.map((user) => user.id), creatorId],
@@ -211,26 +213,32 @@ export default {
           const groupId = groupChatRef.id;
 
           const batch = projectFirestore.batch();
-          this.selectedUsers.forEach((user) => {
+          for (let user of this.selectedUsers) {
             const userRef = projectFirestore.collection('users').doc(user.id);
-            batch.update(userRef, {
-              chats_group: projectFirestore.FieldValue.arrayUnion(groupId),
-            });
-          });
+            const updatedData = await userRef.get();
+            const updatedChats = updatedData.data().chats_group || [];
+            updatedChats.push(groupId);
+            batch.update(userRef, { chats_group: updatedChats });
+          }
 
           const creatorRef = projectFirestore.collection('users').doc(creatorId);
-          batch.update(creatorRef, {
-            chats_group: projectFirestore.FieldValue.arrayUnion(groupId),
-          });
+          const creatorData = await creatorRef.get();
+          const creatorChats = creatorData.data().chats_group || [];
+          creatorChats.push(groupId);
+          batch.update(creatorRef, { chats_group: creatorChats });
 
           await batch.commit();
+          console.log("Group chat created successfully.");
 
           await this.sendNotifications(
             this.selectedUsers.map((user) => user.id),
             'New group chat created: ' + this.text_to_send,
             this.group_name
           );
+          console.log("Notifications sent.");
+          this.router.push('/WhatsappHome');
         } else {
+          console.log("Creating binome chat...");
           const otherUser = this.selectedUsers[0].id;
 
           const otherUserRef = projectFirestore.collection('users').doc(otherUser);
@@ -246,6 +254,7 @@ export default {
 
           if (commonChat) {
             this.showModal = true;
+            console.log("Binome chat already exists.");
           } else {
             const binomeChatRef = await projectFirestore.collection('messages_binome').add({
               creator_id: creatorId,
@@ -267,11 +276,11 @@ export default {
             const chatId = binomeChatRef.id;
 
             await creatorRef.update({
-              chats_binome: projectFirestore.FieldValue.arrayUnion(chatId),
+              chats_binome: [...creatorChats, chatId],
             });
 
             await otherUserRef.update({
-              chats_binome: projectFirestore.FieldValue.arrayUnion(chatId),
+              chats_binome: [...otherUserChats, chatId],
             });
 
             const creatorDoc = await creatorRef.get();
@@ -282,6 +291,9 @@ export default {
               'New binome chat created: ' + this.text_to_send,
               creatorUsername
             );
+
+            console.log("Binome chat created successfully.");
+            this.router.push('/WhatsappHome');
           }
         }
       } catch (error) {
@@ -325,6 +337,7 @@ export default {
   },
 };
 </script>
+
 <style scoped>
 .create-chat-wrapper {
   margin: 20px;
