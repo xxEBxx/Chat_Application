@@ -4,10 +4,10 @@
     <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
       <div v-if="message.sender !== currentUser.uid" class="message-header">
         <router-link :to="'/profile_other/' + message.sender">
-        <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+          <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
         </router-link>
         <router-link :to="'/profile_other/' + message.sender">
-        <p><strong>{{ getUserName(message.sender) }}</strong></p>
+          <p><strong>{{ getUserName(message.sender) }}</strong></p>
         </router-link>
       </div>
       <p>{{ message.text }}</p>
@@ -120,8 +120,6 @@ export default {
       return users[userId]?.image || '';
     };
 
-    
-
     const addNotification = async (userId, messageText, senderName) => {
       const userRef = projectFirestore.collection('users').doc(userId);
       const userDoc = await userRef.get();
@@ -130,10 +128,11 @@ export default {
         notifications.push({ status: 'unread', username: senderName, text: messageText, timestamp: Date.now() });
         await userRef.update({ notifications });
       } else {
-      
+        console.error('User does not exist');
       }
     };
-const sendMessage = async () => {
+
+    const sendMessage = async () => {
       if (newMessage.value.trim()) {
         const message = {
           sender: currentUser.uid,
@@ -153,13 +152,13 @@ const sendMessage = async () => {
             last_message_viewed: false,
             list_mess: currentMessages
           });
- const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
+          const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
           const senderName = getUserName(currentUser.uid); // Get the sender's name
           await addNotification(otherUserId, message.text, senderName);
 
           newMessage.value = '';
         } else {
-        
+          console.error('Chat does not exist');
         }
       }
     };
@@ -205,7 +204,7 @@ const sendMessage = async () => {
 <style scoped>
 .chat-details {
   margin-top: 20px;
-  width:100%;
+  width: 100%;
   height: 500px; /* Adjust as needed */
   overflow-y: auto;
 }
