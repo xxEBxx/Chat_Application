@@ -1,11 +1,14 @@
 <template>
-  
-    <div class="signout-container">
-      <p class="signout-message">Are you sure you want to sign out?</p>
-      <button @click="signOut" class="signout-button signout-button1">Sign Out</button>
-      <button @click="cancel" class="signout-button cancel">Cancel</button>
+  <div class="min-h-screen flex items-center justify-center bg-gray-200">
+    <div class="p-5 bg-gray-100 rounded-lg shadow-lg shadow-opacity-50 max-w-sm w-full text-center">
+      <p class="text-xl font-bold text-gray-700 mb-4">Are you sure you want to sign out?</p>
+      <div class="flex space-x-4 justify-center">
+        <button @click="signOut" class="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-700 focus:outline-none">Sign Out</button>
+        <button @click="cancel" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 focus:outline-none">Cancel</button>
+      </div>
     </div>
-  </template>
+  </div>
+</template>
   
   <script>
   import { auth, projectFirestore } from '@/firebase/config.js';
