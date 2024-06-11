@@ -62,11 +62,9 @@ export default {
     };
 
     const passToAdmin = () => {
-      if (currentUser.uid === chat.value.creator_id) {
-        const routeParams = { chatId: props.id };
-        const routeOptions = { name: 'AdminControls', params: routeParams };
-        router.push(routeOptions);
-      }
+      const routeParams = { chatId: props.id };
+      const routeOptions = { name: 'AdminControls', params: routeParams };
+      router.push(routeOptions);
     };
 
     const subscribeToMessages = () => {
