@@ -8,7 +8,7 @@
           class="w-full md:w-1/2 rounded-lg mb-4 md:mb-0"
         />
         <div class="md:ml-6 text-center md:text-left">
-          <h1 class="text-4xl font-bold text-gray-800 mb-2">Welcome</h1>
+          <h1 class="text-4xl font-bold text-gray-800 mb-2">Welcome to Connectify</h1>
           <h2 class="text-2xl font-semibold text-gray-600 mb-4">Connect, Communicate, Collaborate</h2>
           <p class="text-gray-700 mb-4">
             Welcome to our chat application, designed to meet all your communication needs. Whether you want to chat one-on-one, create a group for your team, or join a public discussion, our app has it all. Enjoy seamless messaging, intuitive user interfaces, and secure conversations. Dive into the world of effortless communication with features that keep you connected anytime, anywhere.
