@@ -107,35 +107,43 @@ export default {
     };
 
     const addUser = async () => {
-      try {
-        if (newUserEmail.value.trim()) {
-          const userRef = await projectFirestore.collection('users').where('email', '==', newUserEmail.value.trim()).get();
-          if (!userRef.empty) {
-            const userId = userRef.docs[0].id;
-            const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
-            const chatDoc = await chatRef.get();
-            if (chatDoc.exists) {
-              const currentMembers = chatDoc.data().members || [];
-              if (!currentMembers.includes(userId)) {
-                await chatRef.update({
-                  members: firebase.firestore.FieldValue.arrayUnion(userId)
-                });
-                await fetchMessagesGroup();
-                newUserEmail.value = '';
-              } else {
-                console.error('User already in group');
-              }
-            } else {
-              console.error(`No chat found with id: ${props.chatId}`);
-            }
+  try {
+    if (newUserEmail.value.trim()) {
+      const userRef = await projectFirestore.collection('users').where('email', '==', newUserEmail.value.trim()).get();
+      if (!userRef.empty) {
+        const userId = userRef.docs[0].id;
+        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const currentMembers = chatDoc.data().members || [];
+          if (!currentMembers.includes(userId)) {
+            await chatRef.update({
+              members: firebase.firestore.FieldValue.arrayUnion(userId)
+            });
+
+            // Update user's chats_group
+            const userDocRef = projectFirestore.collection('users').doc(userId);
+            await userDocRef.update({
+              chats_group: firebase.firestore.FieldValue.arrayUnion(props.chatId)
+            });
+
+            await fetchMessagesGroup();
+            newUserEmail.value = '';
           } else {
-            console.error('No user found with that email');
+            console.error('User already in group');
           }
+        } else {
+          console.error(`No chat found with id: ${props.chatId}`);
         }
-      } catch (error) {
-        console.error('Error adding user:', error);
+      } else {
+        console.error('No user found with that email');
       }
-    };
+    }
+  } catch (error) {
+    console.error('Error adding user:', error);
+  }
+};
+
 
     const removeUser = async (userId) => {
       try {
