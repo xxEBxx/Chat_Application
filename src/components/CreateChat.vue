@@ -83,6 +83,8 @@
 <script>import { projectFirestore } from '../firebase/config';
 import { getUser } from './UserState';
 import { useRouter } from 'vue-router';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 
 export default {
   name: 'CreateChat',
