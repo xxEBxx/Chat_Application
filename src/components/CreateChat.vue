@@ -1,93 +1,105 @@
 <template>
-  <div class="create-chat-wrapper">
-    <h3>Add a Conversation</h3>
-    <div class="chat-type-selector">
-      <label>
-        <input type="radio" v-model="chatType" value="group" />
-        <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>
-      </label>
-      <label>
-        <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" />
-        <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>
-      </label>
-    </div>
-    <input
-      type="text"
-      v-model="searchTerm"
-      @input="searchUsers"
-      placeholder="Search users by username..."
-      class="search-input"
-    />
-    <div class="search-results" v-if="filteredUsers.length">
-      <div
-        v-for="(user, index) in filteredUsers.slice(0, 3)"
-        :key="user.id"
-        class="search-result-item"
-      >
-        <img :src="user.image" alt="Profile Picture" class="profile-picture" />
-        <div>
-          <p class="username">{{ user.user_name }}</p>
-          <p class="email">{{ user.email }}</p>
+  <div class="min-h-screen flex items-center justify-center bg-gray-200">
+    <div class="p-5 bg-gray-100 rounded-lg shadow-lg shadow-opacity-50 max-w-md w-full">
+      <h3 class="text-2xl font-bold text-gray-700 mb-4">Add a Conversation</h3>
+      <div class="flex justify-around mb-4">
+        <label class="flex items-center cursor-pointer">
+          <input type="radio" v-model="chatType" value="group" class="hidden" />
+          <i class="bi bi-people text-2xl text-gray-700"></i>
+        </label>
+        <label class="flex items-center cursor-pointer">
+          <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" class="hidden" />
+          <i class="bi bi-person text-2xl text-gray-700"></i>
+        </label>
+      </div>
+      <input
+        type="text"
+        v-model="searchTerm"
+        @input="searchUsers"
+        placeholder="Search users by username..."
+        class="w-full p-3 mb-4 border border-gray-300 rounded-full bg-gray-200 text-gray-700 focus:border-blue-500 focus:ring focus:ring-blue-500"
+      />
+      <div v-if="filteredUsers.length" class="bg-white rounded-lg shadow-md shadow-opacity-50 mb-4">
+        <div v-for="(user, index) in filteredUsers.slice(0, 3)" :key="user.id" class="flex items-center p-3 border-b border-gray-300">
+          <img :src="user.image" alt="Profile Picture" class="w-10 h-10 rounded-full mr-3" />
+          <div class="flex-1">
+            <p class="text-gray-700 font-semibold">{{ user.user_name }}</p>
+            <p class="text-gray-500">{{ user.email }}</p>
+          </div>
           <button
             v-if="!hasExistingChat(user.id) || chatType === 'group'"
             @click="toggleUser(user)"
-            class="toggle-user-button"
+            class="ml-3 px-3 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none"
           >
             {{ isUserSelected(user.id) ? '-' : '+' }}
           </button>
         </div>
       </div>
-    </div>
-    <input
-      type="text"
-      v-model="text_to_send"
-      placeholder="Enter first message"
-      class="message-input"
-    />
-    <div v-if="chatType === 'group' && selectedUsers.length > 0">
       <input
         type="text"
-        v-model="group_name"
-        placeholder="Group name"
-        class="message-input group-name"
+        v-model="text_to_send"
+        placeholder="Enter first message"
+        class="w-full p-3 mb-4 border border-gray-300 rounded-full bg-gray-200 text-gray-700 focus:border-blue-500 focus:ring focus:ring-blue-500"
       />
-
-      <h4>Selected Users for Group Chat</h4>
-      <div class="search-results">
-        <div
-          v-for="(user, index) in selectedUsers"
-          :key="user.id"
-          class="search-result-item"
-        >
-          <img :src="user.image" alt="Profile Picture" class="profile-picture" />
-          <div>
-            <p class="username">{{ user.user_name }}</p>
-            <p class="email">{{ user.email }}</p>
+      <div v-if="chatType === 'group' && selectedUsers.length > 0">
+        <input
+          type="text"
+          v-model="group_name"
+          placeholder="Group name"
+          class="w-full p-3 mb-4 border border-gray-300 rounded-full bg-gray-200 text-gray-700 focus:border-blue-500 focus:ring focus:ring-blue-500"
+        />
+        <h4 class="text-lg font-semibold text-gray-700 mb-2">Selected Users for Group Chat</h4>
+        <div class="bg-white rounded-lg shadow-md shadow-opacity-50">
+          <div v-for="(user, index) in selectedUsers" :key="user.id" class="flex items-center p-3 border-b border-gray-300">
+            <img :src="user.image" alt="Profile Picture" class="w-10 h-10 rounded-full mr-3" />
+            <div>
+              <p class="text-gray-700 font-semibold">{{ user.user_name }}</p>
+              <p class="text-gray-500">{{ user.email }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div v-if="chatType === 'binome' && selectedUsers.length > 0">
-      <h4>Selected User for Binome Chat</h4>
-      <div class="search-results">
-        <div class="search-result-item">
-          <img :src="selectedUsers[0].image" alt="Profile Picture" class="profile-picture" />
-          <div>
-            <p class="username">{{ selectedUsers[0].user_name }}</p>
+      <div v-if="chatType === 'binome' && selectedUsers.length > 0">
+        <h4 class="text-lg font-semibold text-gray-700 mb-2">Selected User for Binome Chat</h4>
+        <div class="bg-white rounded-lg shadow-md shadow-opacity-50">
+          <div class="flex items-center p-3">
+            <img :src="selectedUsers[0].image" alt="Profile Picture" class="w-10 h-10 rounded-full mr-3" />
+            <div>
+              <p class="text-gray-700 font-semibold">{{ selectedUsers[0].user_name }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <button @click="submitChat" v-if="chatType === 'binome' && selectedUsers.length > 0" class="submit-button">Submit</button>
-    <button @click="submitChat" v-if="chatType === 'group' && selectedUsers.length > 1" class="submit-button">Submit</button>
-    <button @click="cancelCreation" class="cancel-button">Cancel</button>
+      <button
+        @click="submitChat"
+        v-if="chatType === 'binome' && selectedUsers.length > 0"
+        class="w-full mt-4 px-5 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none"
+      >
+        Submit
+      </button>
+      <button
+        @click="submitChat"
+        v-if="chatType === 'group' && selectedUsers.length > 1"
+        class="w-full mt-4 px-5 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none"
+      >
+        Submit
+      </button>
+      <button
+        @click="cancelCreation"
+        class="w-full mt-4 px-5 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 focus:outline-none"
+      >
+        Cancel
+      </button>
 
-    <!-- Modal -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal">
-        <h3>Chat Already Exists</h3>
-        <p>You already have a binome chat with this user.</p>
-        <button @click="closeModal" class="close-button">Close</button>
+      <!-- Modal -->
+      <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-5 rounded-lg shadow-lg text-center">
+          <h3 class="text-xl font-semibold mb-4">Chat Already Exists</h3>
+          <p class="mb-4">You already have a binome chat with this user.</p>
+          <button @click="closeModal" class="px-5 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none">
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>

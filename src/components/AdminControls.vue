@@ -1,21 +1,47 @@
 <template>
-  <div class="admin-controls">
-    <h3 v-if="isAdmin">Admin Controls</h3>
-    <h3 v-else>Group Participants</h3>
-    <div v-for="user in users" :key="user.id" class="user-item">
-      <p>{{ user.name }}</p>
-      <button v-if="isAdmin && user.id !== currentUser.uid" @click="removeUser(user.id)" class="remove-button">Remove</button>
+  <div class="min-h-screen flex items-center justify-center bg-gray-200">
+    <div class="mt-5 p-5 bg-gray-100 rounded-lg shadow-lg shadow-opacity-50 max-w-md w-full">
+      <h3 v-if="isAdmin" class="text-2xl font-bold text-gray-700">Admin Controls</h3>
+      <h3 v-else class="text-2xl font-bold text-gray-700">Group Participants</h3>
+      <div v-for="user in users" :key="user.id" class="flex justify-between items-center p-3 border-b border-gray-300">
+        <p class="text-gray-600">{{ user.name }}</p>
+        <button 
+          v-if="isAdmin && user.id !== currentUser.uid" 
+          @click="removeUser(user.id)" 
+          class="px-4 py-2 bg-white text-red-500 rounded-full hover:bg-gray-300 focus:outline-none">
+          Remove
+        </button>
+      </div>
+      <div v-if="isAdmin" class="relative flex items-center mt-4">
+        <input 
+          v-model="newUserEmail" 
+          @input="searchUsers" 
+          placeholder="Add user by email" 
+          class="flex-grow p-3 border border-gray-300 rounded-full focus:border-blue-500 focus:ring focus:ring-blue-200"
+        />
+        <ul 
+          v-if="suggestedUsers.length" 
+          class="absolute top-14 w-full border border-gray-300 rounded-lg bg-white z-10 max-h-36 overflow-y-auto shadow-md shadow-opacity-50 mt-1">
+          <li 
+            v-for="suggestedUser in suggestedUsers" 
+            :key="suggestedUser.id" 
+            @click="selectUser(suggestedUser)" 
+            class="p-3 cursor-pointer hover:bg-gray-100">
+            {{ suggestedUser.email }}
+          </li>
+        </ul>
+        <button 
+          @click="addUser" 
+          class="ml-3 px-5 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-700 focus:outline-none">
+          Add
+        </button>
+      </div>
+      <button 
+        @click="returnToChat" 
+        class="mt-5 px-5 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 focus:outline-none">
+        Return to Chat
+      </button>
     </div>
-    <div v-if="isAdmin" class="add-user">
-      <input v-model="newUserEmail" @input="searchUsers" placeholder="Add user by email" class="add-user-input" />
-      <ul v-if="suggestedUsers.length" class="suggested-users">
-        <li v-for="suggestedUser in suggestedUsers" :key="suggestedUser.id" @click="selectUser(suggestedUser)">
-          {{ suggestedUser.email }}
-        </li>
-      </ul>
-      <button @click="addUser" class="add-button">Add</button>
-    </div>
-    <button @click="returnToChat" class="return-button">Return to Chat</button>
   </div>
 </template>
 
@@ -71,19 +97,19 @@ export default {
     };
 
     const checkIfAdmin = async () => {
-  try {
-    const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
-    const chatDoc = await chatRef.get();
-    if (chatDoc.exists) {
-      const creatorId = chatDoc.data().creator_id;
-      isAdmin.value = creatorId === currentUser.value.uid;
-    } else {
-      console.error(`No chat found with id: ${props.chatId}`);
-    }
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-  }
-  };
+      try {
+        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const creatorId = chatDoc.data().creator_id;
+          isAdmin.value = creatorId === currentUser.value.uid;
+        } else {
+          console.error(`No chat found with id: ${props.chatId}`);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+    };
 
     const searchUsers = debounce(async () => {
       try {
@@ -107,43 +133,42 @@ export default {
     };
 
     const addUser = async () => {
-  try {
-    if (newUserEmail.value.trim()) {
-      const userRef = await projectFirestore.collection('users').where('email', '==', newUserEmail.value.trim()).get();
-      if (!userRef.empty) {
-        const userId = userRef.docs[0].id;
-        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
-        const chatDoc = await chatRef.get();
-        if (chatDoc.exists) {
-          const currentMembers = chatDoc.data().members || [];
-          if (!currentMembers.includes(userId)) {
-            await chatRef.update({
-              members: firebase.firestore.FieldValue.arrayUnion(userId)
-            });
+      try {
+        if (newUserEmail.value.trim()) {
+          const userRef = await projectFirestore.collection('users').where('email', '==', newUserEmail.value.trim()).get();
+          if (!userRef.empty) {
+            const userId = userRef.docs[0].id;
+            const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+            const chatDoc = await chatRef.get();
+            if (chatDoc.exists) {
+              const currentMembers = chatDoc.data().members || [];
+              if (!currentMembers.includes(userId)) {
+                await chatRef.update({
+                  members: firebase.firestore.FieldValue.arrayUnion(userId)
+                });
 
-            // Update user's chats_group
-            const userDocRef = projectFirestore.collection('users').doc(userId);
-            await userDocRef.update({
-              chats_group: firebase.firestore.FieldValue.arrayUnion(props.chatId)
-            });
+                // Update user's chats_group
+                const userDocRef = projectFirestore.collection('users').doc(userId);
+                await userDocRef.update({
+                  chats_group: firebase.firestore.FieldValue.arrayUnion(props.chatId)
+                });
 
-            await fetchMessagesGroup();
-            newUserEmail.value = '';
+                await fetchMessagesGroup();
+                newUserEmail.value = '';
+              } else {
+                console.error('User already in group');
+              }
+            } else {
+              console.error(`No chat found with id: ${props.chatId}`);
+            }
           } else {
-            console.error('User already in group');
+            console.error('No user found with that email');
           }
-        } else {
-          console.error(`No chat found with id: ${props.chatId}`);
         }
-      } else {
-        console.error('No user found with that email');
+      } catch (error) {
+        console.error('Error adding user:', error);
       }
-    }
-  } catch (error) {
-    console.error('Error adding user:', error);
-  }
-};
-
+    };
 
     const removeUser = async (userId) => {
       try {
@@ -202,89 +227,3 @@ export default {
   }
 };
 </script>
-
-<style scoped>
-.admin-controls {
-  margin-top: 20px;
-}
-
-.user-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-.remove-button {
-  padding: 5px 10px;
-  border: none;
-  background-color: #ff4d4d;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.remove-button:hover {
-  background-color: #cc0000;
-}
-
-.add-user {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.add-user-input {
-  flex-grow: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  outline: none;
-}
-
-.add-user-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-}
-
-.suggested-users {
-  position: absolute;
-  top: 40px;
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: white;
-  z-index: 10;
-  max-height: 150px;
-  overflow-y: auto;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.suggested-users li {
-  padding: 10px;
-  cursor: pointer;
-}
-
-.suggested-users li:hover {
-  background-color: #f1f1f1;
-}
-
-.add-button {
-  padding: 10px 15px;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-.add-button:hover {
-  background-color: #0056b3;
-}
-</style>

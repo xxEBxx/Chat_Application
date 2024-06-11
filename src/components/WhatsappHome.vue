@@ -1,21 +1,30 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-100">
-    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
-      <div class="flex space-x-4">
-        <p @click="goto_profile" :class="['cursor-pointer', go ? 'font-bold' : '']">Profile</p>
-        <p @click="goto_home" :class="['cursor-pointer', !go ? 'font-bold' : '']">Home</p>
+    <nav class="bg-gray-800 text-white py-1 px-4 flex justify-between items-center">
+      <div class="flex items-center space-x-7">
+        <p class="flex items-center justify-center h-full">LOGO</p>
+        <p @click="goto_home" :class="['cursor-pointer flex items-center justify-center h-full', !go ? 'font-bold' : '']">
+          <i class="bi bi-house-door-fill" style="font-size: 1.5rem; color: white;"></i>
+        </p>
+        <p @click="goto_profile" :class="['cursor-pointer flex items-center justify-center h-full', go ? 'font-bold' : '']">
+          <i class="bi bi-person-fill" style="font-size: 1.5rem; color: white;"></i>
+        </p>
       </div>
-      <div class="flex space-x-4">
-        <router-link to="/public-groups" class="hover:bg-gray-700 px-3 py-2 rounded">Public Chat</router-link>
-        <router-link to="/create-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create New Chat</router-link>
-        <router-link to="/signout" class="hover:bg-gray-700 px-3 py-2 rounded">Sign out</router-link>
-        <router-link to="/create-group-chat" class="hover:bg-gray-700 px-3 py-2 rounded">Create public group</router-link>
-        <router-link :to="'/notification/' + userId" :class="['hover:bg-gray-700 px-3 py-2 rounded', { 'bg-red-500': isNotificationsFull }]">Notification</router-link>
+      <div class="flex space-x-8">        
+        <router-link to="/create-chat" class="hover:bg-gray-700 px-3 py-2 rounded flex items-center justify-center">Create New Chat</router-link>
+        <router-link to="/public-groups" class="hover:bg-gray-700 px-3 py-2 rounded flex items-center justify-center">Public Chat</router-link>        
+        <router-link to="/create-group-chat" class="hover:bg-gray-700 px-3 py-2 rounded flex items-center justify-center">Create public group</router-link>
+        <router-link :to="'/notification/' + userId" :class="['hover:bg-gray-700 px-3 py-2 rounded flex items-center justify-center', { 'bg-red-500': isNotificationsFull }]">
+          <i class="bi bi-bell-fill" style="font-size: 1.5rem; color: white;"></i>
+        </router-link>        
+        <router-link to="/signout" class="hover:bg-gray-700 px-3 py-2 rounded flex items-center justify-center">
+          <i class="bi bi-box-arrow-right" style="font-size: 1.5rem; color: white;"></i>
+        </router-link>
       </div>
     </nav>
     <div class="flex-grow p-6">
-      <profile v-if="go" />
-      <chat v-else :user-data="userData" />
+      <profile v-if="go"></profile>
+      <chat v-else :user-data="userData"></chat>
     </div>
     <div v-if="showPopup" class="fixed bottom-5 right-5 bg-gray-800 text-white p-4 rounded shadow-md">
       <p>You got a new notification</p>
@@ -24,10 +33,13 @@
   </div>
 </template>
 
+
 <script>
 import { auth, projectFirestore } from '@/firebase/config.js'; // Adjusted import for simplicity
 import profile from "@/components/profile.vue";
 import chat from "@/components/Home.vue";
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 
 export default {
   name: "whatsappHome",
