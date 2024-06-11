@@ -44,7 +44,7 @@ export default {
 
 <style scoped>
 .container {
-  margin-left: 6%;
+ 
   display: flex;
   width:100%;
   height: 100vh;
