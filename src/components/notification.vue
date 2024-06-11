@@ -1,13 +1,16 @@
 <template>
-    <div>
-      <h2>Notifications</h2>
+    <div class="notification-container">
+      <h2 class="notification-title">Notifications</h2>
       <router-link to="/WhatsappHome" class="back-link">Back to Home</router-link>
-      <ul>
-        <li v-for="notification in notifications" :key="notification.id">
-          <strong>{{ notification.chatname }}</strong>: {{ notification.message }} {{ notification.status }}
+      <br>
+      <br>
+      <button @click="updateNotificationsToRead" class="mark-read-button">OK</button>
+      <ul class="notification-list">
+        <li v-for="notification in reversedNotifications" :key="notification.id" :class="{ read: notification.status === 'read', unread: notification.status === 'unread' }">
+          <strong>{{ notification.chatname }}</strong> {{ notification.message }} 
         </li>
       </ul>
-      <button @click="updateNotificationsToRead">I clicked</button>
+      
     </div>
   </template>
   
@@ -23,6 +26,11 @@
     },
     async created() {
       await this.fetchNotifications();
+    },
+    computed: {
+      reversedNotifications() {
+        return [...this.notifications].reverse();
+      }
     },
     methods: {
       async fetchNotifications() {
@@ -69,18 +77,73 @@
   </script>
   
   <style scoped>
+  .notification-container {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .notification-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
   .back-link {
-    display: inline-block;
+    display: block;
     margin-bottom: 20px;
     color: #007BFF;
     text-decoration: none;
-    font-size: 16px;
+    font-size: 14px;
   }
   
   .back-link:hover {
     text-decoration: underline;
   }
   
-  /* Add other styles as needed */
+  .notification-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .notification-list li {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+  }
+  
+  .read {
+    background-color: #e6ffed;
+    border-left: 5px solid #28a745;
+  }
+  
+  .unread {
+    background-color: #ffe6e6;
+    border-left: 5px solid #dc3545;
+    font-weight: bold;
+  }
+  
+  .notification-list li strong {
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .mark-read-button {
+    padding: 10px 30px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .mark-read-button:hover {
+    background-color: #0056b3;
+  }
   </style>
   
