@@ -387,7 +387,7 @@ export default {
 
 .toggle-user-button {
   background-color: #007bff;
-  color: white;
+  color: black;
   border: none;
   border-radius: 5px;
   padding: 5px 10px;
@@ -422,6 +422,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #444;
 }
 
 .modal {
@@ -444,4 +445,211 @@ export default {
 .close-button:hover {
   background-color: #0056b3;
 }
+/* Wrapper for the entire component */
+.create-chat-wrapper {
+  padding: 20px;
+  background-color: #2c2c2c;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
+  color: #fff;
+}
+
+/* Header styles */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #e0e0e0;
+}
+
+/* Chat type selector styles */
+.chat-type-selector {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.chat-type-selector label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.chat-type-icon {
+  width: 40px;
+  height: 40px;
+  filter: grayscale(100%);
+}
+
+/* Search bar styles */
+.search-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #444;
+  border-radius: 24px;
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  outline: none;
+  margin-bottom: 15px;
+}
+
+/* Search results styles */
+.search-results {
+  background-color: #3c3c3c;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  margin-bottom: 15px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.username {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.email {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  margin: 0;
+}
+
+/* User list styles */
+.user-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+  background-color: #3c3c3c;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-user-button {
+  background-color: #555;
+  color: #e0e0e0;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.toggle-user-button:hover {
+  background-color: #777;
+}
+
+/* Message input styles */
+.message-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #444;
+  border-radius: 24px;
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  outline: none;
+  margin-top: 15px;
+}
+
+/* Selected users section styles */
+.selected-users {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #3c3c3c;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.selected-users h4 {
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+  color: #e0e0e0;
+}
+
+/* Submit button styles */
+.submit-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #555;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+  background-color: #777;
+}
+
+.group-name {
+  margin-left: -10px;
+}
+
+/* Cancel button styles */
+.cancel-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #444;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-button:hover {
+  background-color: #666;
+}
 </style>
+
