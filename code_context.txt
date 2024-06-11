@@ -1,0 +1,3322 @@
+// File: src/App.vue
+<template>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.3/font/bootstrap-icons.css">  <div id="app">
+    <router-view/>
+  </div>
+</template>
+
+<script>
+import Navbar from './components/NavBar.vue';
+import '@fortawesome/fontawesome-free/css/all.css';
+
+export default {
+  name: 'App',
+  components: {
+    Navbar
+  }
+};
+</script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+
+// File: src/components/AdminControls.vue
+<template>
+  <div class="admin-controls">
+    <h3 v-if="isAdmin">Admin Controls</h3>
+    <h3 v-else>Group Participants</h3>
+    <div v-for="user in users" :key="user.id" class="user-item">
+      <p>{{ user.name }}</p>
+      <button v-if="isAdmin && user.id !== currentUser.uid" @click="removeUser(user.id)" class="remove-button">Remove</button>
+    </div>
+    <div v-if="isAdmin" class="add-user">
+      <input v-model="newUserEmail" @input="searchUsers" placeholder="Add user by email" class="add-user-input" />
+      <ul v-if="suggestedUsers.length" class="suggested-users">
+        <li v-for="suggestedUser in suggestedUsers" :key="suggestedUser.id" @click="selectUser(suggestedUser)">
+          {{ suggestedUser.email }}
+        </li>
+      </ul>
+      <button @click="addUser" class="add-button">Add</button>
+    </div>
+    <button @click="returnToChat" class="return-button">Return to Chat</button>
+  </div>
+</template>
+
+<script>
+import { projectFirestore } from '@/firebase/config.js';
+import firebase from 'firebase/app';
+import { ref, onMounted } from 'vue';
+import router from '@/router';
+import debounce from 'lodash.debounce';
+
+export default {
+  name: 'AdminControls',
+  props: {
+    chatId: {
+      type: String,
+      required: true
+    }
+  },
+  setup(props) {
+    const users = ref([]);
+    const newUserEmail = ref('');
+    const suggestedUsers = ref([]);
+    const members = ref([]);
+    const currentUser = firebase.auth().currentUser;
+    const isAdmin = ref(false);
+
+    const fetchMessagesGroup = async () => {
+      try {
+        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          members.value = chatDoc.data().members || [];
+          checkIfAdmin();
+          await fetchUsers(members.value);
+        } else {
+          console.error(`No chat found with id: ${props.chatId}`);
+        }
+      } catch (error) {
+        console.error('Error fetching chat data:', error);
+      }
+    };
+
+    const fetchUsers = async (userIds) => {
+      const userPromises = userIds.map(userId => fetchUser(userId));
+      const fetchedUsers = await Promise.all(userPromises);
+      users.value = fetchedUsers;
+    };
+
+    const fetchUser = async (userId) => {
+      const userRef = projectFirestore.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      return userDoc.exists ? { id: userId, name: userDoc.data().user_name } : { id: userId, name: 'Unknown' };
+    };
+
+    const checkIfAdmin = () => {
+      isAdmin.value = members.value.includes(currentUser.uid);
+    };
+
+    const searchUsers = debounce(async () => {
+      try {
+        if (newUserEmail.value.trim()) {
+          const usersRef = await projectFirestore.collection('users')
+            .where('email', '>=', newUserEmail.value.trim())
+            .where('email', '<=', newUserEmail.value.trim() + '\uf8ff')
+            .get();
+          suggestedUsers.value = usersRef.docs.map(doc => ({ id: doc.id, email: doc.data().email }));
+        } else {
+          suggestedUsers.value = [];
+        }
+      } catch (error) {
+        console.error('Error searching users:', error);
+      }
+    }, 300);
+
+    const selectUser = (user) => {
+      newUserEmail.value = user.email;
+      suggestedUsers.value = [];
+    };
+
+    const addUser = async () => {
+  try {
+    if (newUserEmail.value.trim()) {
+      const userRef = await projectFirestore.collection('users').where('email', '==', newUserEmail.value.trim()).get();
+      if (!userRef.empty) {
+        const userId = userRef.docs[0].id;
+        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const currentMembers = chatDoc.data().members || [];
+          if (!currentMembers.includes(userId)) {
+            await chatRef.update({
+              members: firebase.firestore.FieldValue.arrayUnion(userId)
+            });
+            // Update user's chat_group array with the current chatId
+            await projectFirestore.collection('users').doc(userId).update({
+              chats_group: firebase.firestore.FieldValue.arrayUnion(props.chatId)
+            });
+            await fetchMessagesGroup();
+            newUserEmail.value = '';
+          } else {
+            console.error('User already in group');
+          }
+        } else {
+          console.error(`No chat found with id: ${props.chatId}`);
+        }
+      } else {
+        console.error('No user found with that email');
+      }
+    }
+  } catch (error) {
+    console.error('Error adding user:', error);
+  }
+};
+
+
+    const removeUser = async (userId) => {
+      try {
+        const chatRef = projectFirestore.collection('messages_group').doc(props.chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          await chatRef.update({
+            members: firebase.firestore.FieldValue.arrayRemove(userId)
+          });
+
+          // Update user data
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const updatedChatsGroup = userData.chats_group.filter(chatId => chatId !== props.chatId);
+            await userRef.update({
+              chats_group: updatedChatsGroup
+            });
+
+            // Alert the removed user
+            alertRemovedUser(userData.user_name);
+          }
+
+          await fetchMessagesGroup();
+        } else {
+          console.error(`No chat found with id: ${props.chatId}`);
+        }
+      } catch (error) {
+        console.error('Error removing user:', error);
+      }
+    };
+
+    const alertRemovedUser = (userName) => {
+      // Alert the removed user
+    };
+
+    const returnToChat = () => {
+        router.push('/whatsappHome');
+      };
+
+    onMounted(fetchMessagesGroup);
+
+    return {
+      users,
+      removeUser,
+      addUser,
+      newUserEmail,
+      suggestedUsers,
+      isAdmin,
+      currentUser,
+      returnToChat,
+      searchUsers,
+      selectUser
+    };
+  }
+};
+</script>
+
+<style scoped>
+.admin-controls {
+  margin-top: 20px;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.remove-button {
+  padding: 5px 10px;
+  border: none;
+  background-color: #ff4d4d;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.remove-button:hover {
+  background-color: #cc0000;
+}
+
+.add-user {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.add-user-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+}
+
+.add-user-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.suggested-users {
+  position: absolute;
+  top: 40px;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+  z-index: 10;
+  max-height: 150px;
+  overflow-y: auto;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.suggested-users li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.suggested-users li:hover {
+  background-color: #f1f1f1;
+}
+
+.add-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}
+</style>
+
+// File: src/components/Chat_details_binome.vue
+<template>
+  <div class="chat-details" @scroll="handleScroll">
+    <h2>{{ chatTitle }}</h2>
+    <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
+      <div v-if="message.sender !== currentUser.uid" class="message-header">
+        <router-link :to="'/profile_other/' + message.sender">
+          <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+        </router-link>
+        <router-link :to="'/profile_other/' + message.sender">
+          <p><strong>{{ getUserName(message.sender) }}</strong></p>
+        </router-link>
+      </div>
+      <p>{{ message.text }}</p>
+      <small>{{ formatTimestamp(message.timestamp) }}</small>
+      <small v-if="currentUser.uid === message.sender">
+        <i :class="message.viewed ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
+      </small>
+    </div>
+    <div class="input-container">
+      <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
+      <button @click="sendMessage" class="send-button">Send</button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { projectFirestore } from '@/firebase/config.js';
+import firebase from 'firebase/app';
+import { reactive, ref, onMounted, watch } from 'vue';
+
+export default {
+  name: 'Chat_detail_binome',
+  props: {
+    id: {
+      type: String,
+      required: true
+    }
+  },
+  setup(props) {
+    const messages = ref([]);
+    const newMessage = ref('');
+    const users = reactive({});
+    const currentUser = firebase.auth().currentUser;
+    const chat = ref({});
+    const chatTitle = ref('Loading...');
+    let unsubscribe = null;
+
+    const fetchChatDetails = async () => {
+      const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
+      const chatDoc = await chatRef.get();
+      if (chatDoc.exists) {
+        chat.value = { id: props.id, ...chatDoc.data() };
+        const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
+        await fetchUser(otherUserId);
+        chatTitle.value = users[otherUserId]?.user_name || 'Unknown User';
+      } else {
+        console.error(`No chat found with id: ${props.id}`);
+      }
+    };
+
+    const subscribeToMessages = () => {
+      if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
+      const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
+      unsubscribe = chatRef.onSnapshot(async chatDoc => {
+        if (chatDoc.exists) {
+          const messagesList = chatDoc.data().list_mess || [];
+          const updatedMessages = [];
+          const batch = projectFirestore.batch();
+          let needToUpdate = false;
+
+          for (const message of messagesList) {
+            fetchUser(message.sender);
+            if (message.sender !== currentUser.uid && !message.viewed) {
+              message.viewed = true;
+              needToUpdate = true;
+            }
+            updatedMessages.push(message);
+          }
+
+          if (needToUpdate) {
+            await chatRef.update({ list_mess: updatedMessages });
+          }
+
+          messages.value = updatedMessages;
+        } else {
+          console.error(`No chat found with id: ${props.id}`);
+        }
+      });
+    };
+
+    const fetchUser = async (userId) => {
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Invalid userId:', userId);
+        return;
+      }
+
+      if (!users[userId]) {
+        try {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            users[userId] = userDoc.data();
+          } else {
+            users[userId] = { user_name: 'Unknown', image: '' };
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error);
+        }
+      }
+    };
+
+    const getUserName = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId]?.user_name || 'Fetching...';
+    };
+
+    const getUserPhoto = (userId) => {
+      return users[userId]?.image || '';
+    };
+
+    const addNotification = async (userId, messageText, senderName) => {
+      const userRef = projectFirestore.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        const notifications = userDoc.data().notifications || [];
+        notifications.push({ status: 'unread', username: senderName, text: messageText, timestamp: Date.now() });
+        await userRef.update({ notifications });
+      } else {
+        console.error('User does not exist');
+      }
+    };
+
+    const sendMessage = async () => {
+      if (newMessage.value.trim()) {
+        const message = {
+          sender: currentUser.uid,
+          text: newMessage.value,
+          timestamp: Date.now(),
+          viewed: false
+        };
+        const chatRef = projectFirestore.collection('messages_binome').doc(props.id);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          const currentMessages = chatDoc.data().list_mess || [];
+          currentMessages.push(message);
+          await chatRef.update({
+            last_message_sender: currentUser.uid,
+            last_message_text: newMessage.value,
+            last_message_timestamp: Date.now(),
+            last_message_viewed: false,
+            list_mess: currentMessages
+          });
+          const otherUserId = chat.value.creator_id === currentUser.uid ? chat.value.other_id : chat.value.creator_id;
+          const senderName = getUserName(currentUser.uid); // Get the sender's name
+          await addNotification(otherUserId, message.text, senderName);
+
+          newMessage.value = '';
+        } else {
+          console.error('Chat does not exist');
+        }
+      }
+    };
+
+    const formatTimestamp = (timestamp) => {
+      if (!timestamp) return 'Loading...';
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    onMounted(async () => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
+
+    watch(() => props.id, async (newId) => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
+
+    return {
+      addNotification,
+      chat,
+      messages,
+      newMessage,
+      getUserName,
+      getUserPhoto,
+      sendMessage,
+      formatTimestamp,
+      currentUser,
+      chatTitle
+    };
+  }
+};
+</script>
+
+<style scoped>
+.chat-details {
+  margin-top: 20px;
+  width: 100%;
+  height: 500px; /* Adjust as needed */
+  overflow-y: auto;
+}
+
+/* Custom scrollbar styles */
+.chat-details::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-details::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.message-item {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 10px;
+  background-color: #e1ffc7;
+  max-width: 80%;
+  text-align: left;
+}
+
+.message-item.sent {
+  background-color: #d1e7ff;
+  margin-left: auto;
+  text-align: right;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.input-container {
+  display: flex;
+  margin-top: 10px;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+}
+
+.message-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.send-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.viewed {
+  color: rgba(71, 190, 253, 0.842);
+}
+
+.message-item.sent .message-header {
+  justify-content: flex-end;
+}
+
+.message-item.sent .profile-picture {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.message-item p {
+  margin: 5px 0;
+}
+
+.message-item small {
+  display: block;
+  margin-top: 5px;
+  color: #888;
+}
+
+.message-item.sent small {
+  text-align: right;
+}
+</style>
+
+// File: src/components/Chat_details_group.vue
+<template>
+  <div class="chat-details" @scroll="handleScroll" ref="chatContainer">
+    <h2>{{ chatTitle }}</h2>
+    <div v-for="message in messages" :key="message.timestamp" class="message-item" :class="{ sent: message.sender === currentUser.uid }">
+      <div v-if="message.sender !== currentUser.uid" class="message-header">
+        <router-link :to="'/profile_other/' + message.sender">
+        <img :src="getUserPhoto(message.sender)" alt="Profile Picture" class="profile-picture" />
+        </router-link>
+        <router-link :to="'/profile_other/' + message.sender">
+        <p><strong>{{ getUserName(message.sender) }}</strong></p>
+        </router-link>
+      </div>
+      <p>{{ message.text }}</p>
+      <small>{{ formatTimestamp(message.timestamp) }}</small>
+      <small v-if="currentUser.uid === message.sender">
+        <i :class="isMessageFullyViewed(message) ? 'fas fa-check-double viewed' : 'fas fa-check'"></i>
+      </small>
+    </div>
+    <div class="input-container">
+      <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
+      <button @click="sendMessage" class="send-button">Send</button>
+      <button @click="passToAdmin" class="remove-button">...</button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { projectFirestore } from '@/firebase/config.js';
+import firebase from 'firebase/app';
+import { reactive, ref, onMounted, watch } from 'vue';
+import {useRouter} from 'vue-router';
+
+export default {
+  name: 'ChatDetailsGrp',
+  props: {
+    id: {
+      type: String,
+      required: true
+    }
+  },
+  setup(props) {
+    const messages = ref([]);
+    const newMessage = ref('');
+    const users = reactive({});
+    const currentUser = firebase.auth().currentUser;
+    const chat = ref({});
+    const chatTitle = ref('');
+    let unsubscribe = null;
+    const router= useRouter();
+
+    const fetchChatDetails = async () => {
+      const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+      const chatDoc = await chatRef.get();
+      if (chatDoc.exists) {
+        chat.value = { id: props.id, ...chatDoc.data() };
+        chatTitle.value = chat.value.group_name || 'Unknown Group';
+        await fetchUsers(chat.value.members);
+      } else {
+        console.error(`No chat found with id: ${props.id}`);
+      }
+    };
+
+    const passToAdmin = ()=>{
+     
+        if(currentUser.uid===chat.value.creator_id){
+          const routeParams = {
+          chatId: props.id
+        };
+        const routeOptions = {
+          name: 'AdminControls',
+          params: routeParams
+        };
+        router.push(routeOptions);
+      }
+    };
+    
+    const subscribeToMessages = () => {
+      if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
+      const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+      unsubscribe = chatRef.onSnapshot(chatDoc => {
+        if (chatDoc.exists) {
+          messages.value = chatDoc.data().list_mess || [];
+          messages.value.forEach(message => fetchUser(message.sender));
+        } else {
+          console.error(`No chat found with id: ${props.id}`);
+        }
+      });
+    };
+
+    const fetchUsers = async (userIds) => {
+      for (const userId of userIds) {
+        await fetchUser(userId);
+      }
+    };
+
+    const fetchUser = async (userId) => {
+      if (!users[userId]) {
+        const userRef = projectFirestore.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          users[userId] = userDoc.data();
+        } else {
+          users[userId] = { user_name: 'Unknown', image: '' };
+        }
+      }
+    };
+
+    const getUserName = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId]?.user_name || 'Fetching...';
+    };
+
+    const getUserPhoto = (userId) => {
+      return users[userId]?.image || '';
+    };
+
+    const addNotification = async (userId, messageText, groupName) => {
+  const userRef = projectFirestore.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+  if (userDoc.exists) {
+    const notifications = userDoc.data().notifications || [];
+    notifications.push({ status: 'unread', username:groupName ,text: messageText, timestamp: Date.now() });
+    await userRef.update({ notifications });
+  } else {
+    console.error(`No user found with id: ${userId}`);
+  }
+};
+
+const sendMessage = async () => {
+  if (newMessage.value.trim()) {
+    const message = {
+      sender: currentUser.uid,
+      text: newMessage.value,
+      timestamp: Date.now(),
+      viewed: false
+    };
+    const chatRef = projectFirestore.collection('messages_group').doc(props.id);
+    const chatDoc = await chatRef.get();
+    if (chatDoc.exists) {
+      const currentMessages = chatDoc.data().list_mess || [];
+      currentMessages.push(message);
+      await chatRef.update({
+        last_message_sender: currentUser.uid,
+        last_message_text: newMessage.value,
+        last_message_timestamp: Date.now(),
+        last_message_viewed: false,
+        list_mess: currentMessages
+      });
+
+      const groupMembers = chat.value.members.filter(member => member !== currentUser.uid);
+      for (const memberId of groupMembers) {
+        await addNotification(memberId, message.text, chatTitle.value);
+      }
+
+      newMessage.value = '';
+    } else {
+      console.error(`No chat found with id: ${props.id}`);
+    }
+  }
+};
+
+
+    const formatTimestamp = (timestamp) => {
+      if (!timestamp) return 'Loading...';
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const isMessageFullyViewed = (message) => {
+      // Logic to determine if a message is fully viewed
+      return message.viewed;
+    };
+
+    onMounted(async () => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
+
+    watch(() => props.id, async (newId) => {
+      await fetchChatDetails();
+      subscribeToMessages();
+    });
+
+    return {
+      chat,
+      messages,
+      newMessage,
+      getUserName,
+      getUserPhoto,
+      sendMessage,
+      formatTimestamp,
+      isMessageFullyViewed,
+      currentUser,
+      chatTitle,
+      passToAdmin
+    };
+  }
+};
+</script>
+
+<style scoped>
+.chat-details {
+  margin-top: 20px;
+  width: 100%;
+  height: 500px; /* Adjust as needed */
+  overflow-y: auto;
+}
+
+/* Custom scrollbar styles */
+.chat-details::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-details::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.chat-details::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.message-item {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 10px;
+  background-color: #e1ffc7;
+  max-width: 80%;
+  text-align: left;
+}
+
+.message-item.sent {
+  background-color: #d1e7ff;
+  margin-left: auto;
+  text-align: right;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.input-container {
+  display: flex;
+  margin-top: 10px;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+}
+
+.message-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.send-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.viewed {
+  color: rgba(71, 190, 253, 0.842);
+}
+
+.message-item.sent .message-header {
+  justify-content: flex-end;
+}
+
+.message-item.sent .profile-picture {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.message-item p {
+  margin: 5px 0;
+}
+
+.message-item small {
+  display: block;
+  margin-top: 5px;
+  color: #888;
+}
+
+.message-item.sent small {
+  text-align: right;
+}
+</style>
+
+// File: src/components/CreateChat.vue
+<template>
+  <div class="create-chat-wrapper">
+    <h3>Add a Conversation</h3>
+    <div class="chat-type-selector">
+      <label>
+        <input type="radio" v-model="chatType" value="group" />
+        <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>    
+      </label>
+      <label>
+        <input type="radio" v-model="chatType" value="binome" @change="fetchExistingChats" />
+        <i class="bi bi-person" style="font-size: 2rem; color: white;"></i>    
+      </label>
+    </div>
+    <input
+      type="text"
+      v-model="searchTerm"
+      @input="searchUsers"
+      placeholder="Search users by username..."
+      class="search-input"
+    />
+    <div class="search-results" v-if="filteredUsers.length">
+      <div
+        v-for="(user, index) in filteredUsers.slice(0, 3)"
+        :key="user.id"
+        class="search-result-item"
+      >
+        <img :src="user.image" alt="Profile Picture" class="profile-picture" />
+        <div>
+          <p class="username">{{ user.user_name }}</p>
+          <p class="email">{{ user.email }}</p>
+          <button @click="toggleUser(user)" class="toggle-user-button" v-if="!hasExistingChat(user.id) || chatType === 'group'">
+            {{ isUserSelected(user.id) ? '-' : '+' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <input
+      type="text"
+      v-model="text_to_send"
+      placeholder="Enter first message"
+      class="message-input"
+    />
+    <div v-if="chatType === 'group' && selectedUsers.length > 0">
+      <input
+        type="text"
+        v-model="group_name"
+        placeholder="Group name"
+        class="message-input group-name"
+      />
+    
+      <h4>Selected Users for Group Chat</h4>
+      <div class="search-results">
+        <div
+          v-for="(user, index) in selectedUsers"
+          :key="user.id"
+          class="search-result-item"
+        >
+          <img :src="user.image" alt="Profile Picture" class="profile-picture" />
+          <div>
+            <p class="username">{{ user.user_name }}</p>
+            <p class="email">{{ user.email }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="chatType === 'binome' && selectedUsers.length > 0">
+      <h4>Selected User for Binome Chat</h4>
+      <div class="search-results">
+        <div class="search-result-item">
+          <img :src="selectedUsers[0].image" alt="Profile Picture" class="profile-picture" />
+          <div>
+            <p class="username">{{ selectedUsers[0].user_name }}</p>
+          </div>
+        </div> 
+      </div>     
+    </div>
+    <button @click="submitChat" v-if="chatType === 'binome' && selectedUsers.length > 0" class="submit-button">Submit</button>
+    <button @click="submitChat" v-if="chatType === 'group' && selectedUsers.length > 1" class="submit-button">Submit</button>
+    <button @click="cancelCreation" class="cancel-button">Cancel</button>
+  </div>
+</template>
+
+<script>
+import { projectFirestore } from '../firebase/config';
+import { getUser } from './UserState';
+import { useRouter } from 'vue-router';
+
+export default {
+  name: 'CreateChat',
+  data() {
+    return {
+      searchTerm: '',
+      users: [],
+      filteredUsers: [],
+      selectedUsers: [],
+      chatType: 'group',
+      group_name: '',
+      text_to_send: '',
+      existingChats: []
+    };
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
+  methods: {
+    async searchUsers() {
+      if (this.searchTerm.trim() === '') {
+        this.filteredUsers = [];
+        return;
+      }
+
+      const usersRef = projectFirestore.collection('users');
+      const querySnapshot = await usersRef.get();
+
+      this.users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      this.filteredUsers = this.users.filter(user =>
+        user.user_name.toLowerCase().includes(this.searchTerm.toLowerCase())
+      );
+    },
+    isUserSelected(userId) {
+      return this.selectedUsers.some(user => user.id === userId);
+    },
+    hasExistingChat(userId) {
+      return this.existingChats.includes(userId);
+    },
+    toggleUser(user) {
+      if (this.isUserSelected(user.id)) {
+        this.removeChat(user.id);
+      } else {
+        this.addChat(user);
+      }
+    },
+    addChat(user) {
+      if (this.chatType === 'group') {
+        this.selectedUsers.push(user);
+      } else {
+        if (this.selectedUsers.length === 0) {
+          this.selectedUsers.push(user);
+        } else {
+          this.selectedUsers = [user];
+        }
+      }
+    },
+    removeChat(userId) {
+      this.selectedUsers = this.selectedUsers.filter(user => user.id !== userId);
+    },
+    async fetchExistingChats() {
+      if (this.chatType !== 'binome') {
+        this.existingChats = [];
+        return;
+      }
+
+      const creatorId = getUser().uid;
+      const existingChatsSnapshot = await projectFirestore.collection('messages_binome')
+        .where('participants', 'array-contains', creatorId)
+        .get();
+
+      this.existingChats = [];
+      existingChatsSnapshot.forEach(doc => {
+        const data = doc.data();
+        data.participants.forEach(participant => {
+          if (participant !== creatorId) {
+            this.existingChats.push(participant);
+          }
+        });
+      });
+    },
+    async submitChat() {
+      try {
+        const creatorId = getUser().uid;
+
+        if (this.chatType === 'group') {
+          console.log('Creating group chat with name:', this.group_name, 'and users:', this.selectedUsers);
+
+          const groupChatRef = await projectFirestore.collection('messages_group').add({
+            group_name: this.group_name,
+            members: [...this.selectedUsers.map(user => user.id), creatorId],
+            created_at: Date.now(),
+            creator_id: creatorId,
+            last_message_sender: creatorId,
+            last_message_text: this.text_to_send,
+            last_message_timestamp: Date.now(),
+            last_message_viewed_by: [],
+            list_mess: [{
+              sender: creatorId,
+              text: this.text_to_send,
+              timestamp: Date.now(),
+              viewed_by: [],
+            }],
+          });
+
+          const groupId = groupChatRef.id;
+
+          // Update each user's document to include the new group chat ID
+          const batch = projectFirestore.batch();
+          this.selectedUsers.forEach(async (user) => {
+            const userRef = projectFirestore.collection('users').doc(user.id);
+            const updatedData = await userRef.get();
+            const updatedChats = updatedData.data().chats_group || [];
+            const toAddChats = [...updatedChats, groupId];
+            batch.update(userRef, {
+              chats_group: toAddChats
+            });
+          });
+
+          const creatorRef = projectFirestore.collection('users').doc(creatorId);
+          const creatorData = await creatorRef.get();
+          const creatorChats = creatorData.data().chats_group || [];
+          const toAddCreatorChats = [...creatorChats, groupId];
+          batch.update(creatorRef, {
+            chats_group: toAddCreatorChats
+          });
+
+          await batch.commit();
+
+          console.log('Group chat created with ID:', groupId);
+
+          // Send notifications to group members (excluding the creator)
+          await this.sendNotifications(this.selectedUsers.map(user => user.id), 'New group chat created: ' +this.text_to_send,this.group_name);
+
+        } else {
+          const otherUser = this.selectedUsers[0].id;
+
+          // Create a new document in the messages_binome collection
+          const binomeChatRef = await projectFirestore.collection('messages_binome').add({
+            creator_id: creatorId,
+            other_id: otherUser,
+            last_message_sender: creatorId,
+            last_message_text: this.text_to_send,
+            last_message_timestamp: Date.now(),
+            last_message_viewed: false,
+            list_mess:[{
+              sender: creatorId,
+              text: this.text_to_send,
+              timestamp: Date.now(),
+              viewed: false
+            }]
+          });
+
+          const chatId = binomeChatRef.id;
+
+          const updated_data=await projectFirestore.collection('users').doc(creatorId).get();
+          const updated_chats=updated_data.data().chats_binome;
+          const to_add_chats=[...updated_chats,chatId];
+          
+          await projectFirestore.collection('users').doc(creatorId).update({
+            chats_binome:to_add_chats
+          });
+
+          const updated_data2=await projectFirestore.collection('users').doc(otherUser).get();
+          const updated_chats2=updated_data2.data().chats_binome;
+          const to_add_chats2=[...updated_chats2,chatId];
+
+          await projectFirestore.collection('users').doc(otherUser).update({
+            chats_binome:to_add_chats2
+          });
+
+          console.log('Binome chat created with ID:', chatId);
+          const creatorDoc = await projectFirestore.collection('users').doc(creatorId).get();
+          const creatorUsername = creatorDoc.data().user_name;
+
+        
+          await this.sendNotifications([otherUser], 'New binome chat created'+this.text_to_send, creatorUsername);
+        }
+
+        this.cancelCreation();
+      } catch (error) {
+        console.error('Error creating chat:', error);
+      }
+    },
+    async sendNotifications(userIds, message, chatName) {
+      try {
+        const batch = projectFirestore.batch();
+        for (const userId of userIds) {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          const notifications = userDoc.data().notifications || [];
+
+          notifications.push({
+            message: message,
+            chatname: chatName,
+            timestamp: Date.now(),
+            status: false
+          });
+
+          batch.update(userRef, { notifications });
+        }
+        await batch.commit();
+        console.log('Notifications sent');
+      } catch (error) {
+        console.error('Error sending notifications:', error);
+      }
+    },
+    cancelCreation() {
+      this.searchTerm = '';
+      this.filteredUsers = [];
+      this.selectedUsers = [];
+      this.group_name = '';
+      this.text_to_send = '';
+      this.router.push('/WhatsappHome');
+    }
+  },
+  created() {
+    this.fetchExistingChats();
+  }
+};
+</script>
+<style scoped>
+/* Wrapper for the entire component */
+.create-chat-wrapper {
+  padding: 20px;
+  background-color: #2c2c2c;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
+  color: #fff;
+}
+
+/* Header styles */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #e0e0e0;
+}
+
+/* Chat type selector styles */
+.chat-type-selector {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.chat-type-selector label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.chat-type-icon {
+  width: 40px;
+  height: 40px;
+  filter: grayscale(100%);
+}
+
+/* Search bar styles */
+.search-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #444;
+  border-radius: 24px;
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  outline: none;
+  margin-bottom: 15px;
+}
+
+/* Search results styles */
+.search-results {
+  background-color: #3c3c3c;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  margin-bottom: 15px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.username {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+.email {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  margin: 0;
+}
+
+/* User list styles */
+.user-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+  background-color: #3c3c3c;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-user-button {
+  background-color: #555;
+  color: #e0e0e0;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.toggle-user-button:hover {
+  background-color: #777;
+}
+
+/* Message input styles */
+.message-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #444;
+  border-radius: 24px;
+  background-color: #1c1c1c;
+  color: #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  outline: none;
+  margin-top: 15px;
+}
+
+/* Selected users section styles */
+.selected-users {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #3c3c3c;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.selected-users h4 {
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+  color: #e0e0e0;
+}
+
+/* Submit button styles */
+.submit-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #555;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+  background-color: #777;
+}
+
+.group-name {
+  margin-left: -10px;
+}
+
+/* Cancel button styles */
+.cancel-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #444;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-button:hover {
+  background-color: #666;
+}
+</style>
+
+
+// File: src/components/Home.vue
+<template>
+  <div id="app">
+    <div class="container">
+      <div class="chat-list">
+        <button @click="selectChatType('solo')" :class="{ active: selectedChatType === 'solo' }">Solo Chats</button>
+        <button @click="selectChatType('group')" :class="{ active: selectedChatType === 'group' }">Group Chats</button>
+        <div v-if="selectedChatType === 'solo'">
+          <h2>Solo Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
+            <div @click="change_cred('binome', chatId)">
+              <img :src="getChatDisplayimg(chats[chatId])" alt="Profile Picture" class="profile-picture" />
+              <h3>{{ getChatDisplayName(chats[chatId]) }}</h3>
+              <p v-if="getLastMessage_text(chatId)">
+                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div v-if="selectedChatType === 'group'">
+          <h2>Group Chats</h2>
+          <div v-for="chatId in reverseChatIds" :key="chatId" class="chat-item">
+            <div @click="change_cred('group', chatId)">
+              <h3 v-if="chats[chatId]">{{ chats[chatId].group_name }}</h3>
+              <p v-if="getLastMessage_text(chatId)">
+                Last message: from {{ getLastMessage_user(chatId) }} {{ getLastMessage_text(chatId) }} at {{ getLastMessage_timestamp(chatId) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="chat-details">
+        <Chat_details_binome v-if="comp_to_show === 'binome' && id_to_pass" :id="id_to_pass"/>
+        <Chat_details_group v-if="comp_to_show === 'group' && id_to_pass" :id="id_to_pass"/>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import { projectFirestore } from '@/firebase/config.js';
+import firebase from 'firebase/app';
+import { reactive, ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import Chat_details_group from './Chat_details_group.vue';
+import Chat_details_binome from './Chat_details_binome.vue';
+
+export default {
+  name: 'Home',
+  components: { 
+    Chat_details_group,
+    Chat_details_binome,
+  },
+  props: {
+    userData: {
+      type: Object,
+      required: false,
+      default: () => ({ chats_binome: [], chats_group: [] })
+    }
+  },
+  setup(props) {
+    const selectedChatType = ref(null);
+    const chatIds = ref([]);
+    const chats = reactive({});
+    const selectedChat = ref(null);
+    const messages = ref([]);
+    const newMessage = ref('');
+    const users = reactive({});
+    const currentUser = firebase.auth().currentUser;
+    const id_to_pass = ref("");
+    const comp_to_show = ref("");
+
+    const change_cred = (comp, id) => {
+      id_to_pass.value = id;
+      comp_to_show.value = comp;
+      selectChat(id);
+    };
+
+    const chatListUnsubscribe = ref(null);
+
+    const setupChatListListener = () => {
+      if (chatListUnsubscribe.value) {
+        chatListUnsubscribe.value(); // Unsubscribe from previous listener
+      }
+
+      const chatType = selectedChatType.value === 'solo' ? 'chats_binome' : 'chats_group';
+      const userChatsRef = projectFirestore.collection('users').doc(currentUser.uid);
+      
+      chatListUnsubscribe.value = userChatsRef.onSnapshot((doc) => {
+        if (doc.exists) {
+          const userData = doc.data();
+          chatIds.value = selectedChatType.value === 'solo' ? userData.chats_binome : userData.chats_group;
+          fetchChats();
+        }
+      });
+    };
+
+    const watchUserData = watch(() => props.userData, (newVal) => {
+      if (newVal) {
+        console.log('userData is available', newVal);
+        setupChatListListener();
+      }
+    }, { immediate: true });
+
+    const reverseChatIds = computed(() => {
+      return chatIds.value.slice().sort((a, b) => {
+        const chatA = chats[a];
+        const chatB = chats[b];
+        if (!chatA || !chatB) return 0;
+        return chatB.last_message_timestamp - chatA.last_message_timestamp;
+      });
+    });
+    const selectChatType = async (type) => {
+      selectedChatType.value = type;
+      setupChatListListener();
+    };
+
+    const fetchChats = async () => {
+      try {
+        for (const chatId of chatIds.value) {
+          if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+            console.error('Invalid chatId:', chatId);
+            continue;
+          }
+
+          const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+          chatRef.onSnapshot(chatDoc => {
+            if (chatDoc.exists) {
+              chats[chatId] = { id: chatId, ...chatDoc.data() };
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching chats: ", error);
+      }
+    };
+
+    const getLastMessage_text = (chatId) => {
+      return chats[chatId] ? chats[chatId].last_message_text : null;
+    };
+
+    const getLastMessage_timestamp = (chatId) => {
+      const time = chats[chatId].last_message_timestamp;
+      const date = new Date(time);
+      const year = date.getFullYear();
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      const day = ('0' + date.getDate()).slice(-2);
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      const fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      return fullDateString;
+    };
+
+    const getLastMessage_user = (chatId) => {
+      return getUserName(chats[chatId].last_message_sender) || null;
+    };
+
+    const getMessages = (chatId) => {
+      const chat = chats[chatId];
+      if (chat && chat.list_mess) {
+        return chat.list_mess;
+      }
+      return null;
+    };
+
+    const selectChat = async (chatId) => {
+      if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+        console.error('Invalid chatId:', chatId);
+        return;
+      }
+
+      try {
+        const chatRef = projectFirestore.collection(selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group').doc(chatId);
+        const chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          selectedChat.value = { id: chatId, ...chatDoc.data() };
+          await fetchMessages(chatId);
+        }
+      } catch (error) {
+        console.error('Error selecting chat:', error);
+      }
+    };
+
+    const fetchMessages = async (chatId) => {
+      const messagesRef = projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${chatId}/list_mess`).orderBy('timestamp');
+      messagesRef.onSnapshot(snapshot => {
+        const sortedMessages = snapshot.docs.map(doc => {
+          const messageData = doc.data();
+          fetchUser(messageData.sender);
+          return { id: doc.id, ...messageData };
+        }).sort((b, a) => a.last_message_timestamp - b.last_message_timestamp);
+        messages.value = sortedMessages;
+      });
+    };
+
+    const fetchUser = async (userId) => {
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('Invalid userId:', userId);
+        return;
+      }
+      
+      if (!users[userId]) {
+        try {
+          const userRef = projectFirestore.collection('users').doc(userId);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            users[userId] = userDoc.data();
+          } else {
+            users[userId] = { user_name: 'Unknown', image: '' };
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error);
+        }
+      }
+    };
+
+    const getUserName = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId]?.user_name || 'Fetching...';
+    };
+
+    const getUserPhoto = (userId) => {
+      if (!users[userId]) {
+        fetchUser(userId); // Fetch user data if not already fetched
+      }
+      return users[userId]?.image || '';
+    };
+
+    const getChatDisplayName = (chat) => {
+      if (!chat) return 'Unnamed Chat';
+      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
+      return getUserName(otherUserId) || 'Unnamed Chat';
+    };
+
+    const getChatDisplayimg = (chat) => {
+      if (!chat) return '';
+      const otherUserId = chat.creator_id === currentUser.uid ? chat.other_id : chat.creator_id;
+      return getUserPhoto(otherUserId) || '';
+    };
+
+    const sendMessage = async () => {
+      if (newMessage.value.trim()) {
+        const message = {
+          sender: currentUser.uid,
+          text: newMessage.value,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          viewed: false
+        };
+        await projectFirestore.collection(`${selectedChatType.value === 'solo' ? 'messages_binome' : 'messages_group'}/${selectedChat.value.id}/list_mess`).add(message);
+        newMessage.value = '';
+      }
+    };
+
+    onMounted(() => {
+      setupChatListListener();
+    });
+
+    onUnmounted(() => {
+      if (chatListUnsubscribe.value) {
+        chatListUnsubscribe.value(); // Unsubscribe from listener when component unmounts
+      }
+    });
+
+    return {
+      reverseChatIds,
+      selectedChatType,
+      chatIds,
+      chats,
+      selectedChat,
+      messages,
+      newMessage,
+      users,
+      selectChatType,
+      fetchChats,
+      getMessages,
+      getUserName,
+      getUserPhoto,
+      selectChat,
+      sendMessage,
+      getLastMessage_text,
+      getLastMessage_timestamp,
+      getChatDisplayName,
+      getChatDisplayimg,
+      getLastMessage_user,
+      change_cred,
+      id_to_pass,
+      comp_to_show,
+      watchUserData
+    };
+  }
+};
+</script>
+<style scoped>
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 30px;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  position: fixed;
+  top: 60px;
+  left: 10px;
+  z-index: 1000;
+}
+
+button {
+  margin: 5px 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #4a4a4a;
+  color: white;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+button.active, button:hover {
+  background-color: #333;
+  transform: scale(1.05);
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.chat-list {
+  margin: 0;
+  width: 30%;
+  height: 100%;
+  text-align: left;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+  background-color: #f9f9f9;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.chat-item {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin: 10px 0;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background-color: white;
+}
+
+.chat-item:hover {
+  background-color: #f1f1f1;
+}
+
+.chat-details {
+  height: 100%;
+  width: 70%;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.message-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 10px;
+  background-color: #e1ffc7;
+  max-width: 80%;
+  text-align: left;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.message-item p {
+  margin: 0;
+}
+
+.message-item.sent {
+  background-color: #d1e7ff;
+  margin-left: auto;
+  text-align: right;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.input-container {
+  display: flex;
+  margin-top: 10px;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+}
+
+.message-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.send-button {
+  padding: 10px 15px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.create-chat-link {
+  text-decoration: none;
+}
+
+h2 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+h3 {
+  color: #555;
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+</style>
+// File: src/components/Login.vue
+<template>
+    <div class="login">
+      <h2>Login</h2>
+      <form @submit.prevent="login">
+        <div class="form-group">
+          <label for="username">E-mail</label>
+          <input type="text" id="username" v-model="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" v-model="password" required>
+        </div>
+        <button type="submit" @click="">Login</button>
+      </form>
+    </div>
+  </template>
+  
+  <script>
+    import {auth,projectFirestore} from '@/firebase/config.js'
+    import { getUser,setUser } from './UserState';
+
+  export default {
+    data() {
+      return {
+        email: '',
+        password: ''
+      };
+    },
+    methods: {
+      created() {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            setUser(user);
+            console.log(`User ID: ${user.uid}`);
+          } else {
+            setUser(null);
+            console.log("User is signed out");
+          }
+        })
+},
+async login() {
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(this.email, this.password);
+        this.user = userCredential.user;
+        console.log(`User ID: ${this.user.uid}`);
+        setUser(this.user);
+        
+        await projectFirestore.collection('users').doc(this.user.uid).update({
+            connected: true
+        });
+
+        this.$router.push('/whatsappHome'); 
+    } catch (error) {
+        alert(`Login failed: ${error.message}`);
+    }
+}
+
+
+    }
+  }
+  </script>
+  
+  <style scoped>
+  .login {
+    max-width: 300px;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  label {
+    display: block;
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 5px;
+    font-size: 16px;
+  }
+  
+  button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  </style>
+  
+// File: src/components/NavBar.vue
+<template>
+    <nav class="navbar">
+      <router-link to="/login" class="nav-link">Login</router-link>
+      <router-link to="/signin" class="nav-link">Sign Up</router-link>
+    </nav>
+  </template>
+  
+  <script>
+  export default {
+    name: 'Navbar'
+  };
+  </script>
+  
+  <style scoped>
+  .navbar {
+    background-color: #333;
+    padding: 10px;
+  }
+  
+  .nav-link {
+    color: #fff;
+    margin-right: 10px;
+    text-decoration: none;
+  }
+  
+  .nav-link:hover {
+    text-decoration: underline;
+  }
+  </style>
+  
+// File: src/components/Signin.vue
+<template>
+  <div class="signup">
+    <h2>Sign Up</h2>
+    <form @submit.prevent="register">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" v-model="username" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" v-model="email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" v-model="password" required>
+      </div>
+      <div class="form-group">
+        <label for="location">Location</label>
+        <div class="location-input">
+          <select v-model="selectedCountry" @change="changeFlag">
+            <option v-for="(country, index) in countries" :key="index" :value="country.name">{{ country.name }}</option>
+          </select>
+          <div class="selected-flag">
+            <img :src="selectedFlag" alt="Selected Flag" class="flag-icon">
+          </div>
+        </div>
+      </div>
+     
+            
+      <button type="submit">Sign Up</button>
+      <br><br>
+      <button @click="GOOGLE()">Sign in Using Google</button>
+    </form>
+  </div>
+</template>
+  
+  <script>
+  import { setUser } from './UserState.js';
+  import { signInGoogle, projectFirestore, auth } from '../firebase/config.js';
+  
+  export default {
+    data() {
+      return {
+        user: null,
+        username: '',
+        email: '',
+        password: '',
+        location: 'Morocco', // Default location set to Morocco
+        countries: [], // Country data will be fetched dynamically
+        selectedCountry: '',
+        selectedFlag: '',
+        image:"https://freesvg.org/img/abstract-user-flat-4.png"
+       
+      };
+    },
+    created() {
+      // Fetch the list of countries and their flags
+      this.fetchCountries();
+    },
+    methods: {
+      async fetchCountries() {
+        try {
+          const response = await fetch('https://restcountries.com/v3.1/all');
+          const data = await response.json();
+          this.countries = data.map(country => ({
+            name: country.name.common,
+            code: country.cca2,
+            flag: country.flags.png
+          }));
+          
+          // Set default country and flag
+          const defaultCountry = this.countries.find(country => country.name === this.location);
+          if (defaultCountry) {
+            this.selectedCountry = defaultCountry.name;
+            
+            this.selectedFlag = defaultCountry.flag;
+          }
+        } catch (error) {
+          console.error('Error fetching countries:', error);
+        }
+      },
+      changeFlag() {
+        const selectedCountry = this.countries.find(country => country.name === this.selectedCountry);
+        if (selectedCountry) {
+          this.selectedFlag = selectedCountry.flag;
+        }
+      },
+      async register() {
+    try {
+      const userCredential = await auth.createUserWithEmailAndPassword(this.email, this.password);
+      this.user = userCredential.user;
+      console.log(`User ID: ${this.user.uid}`);
+  
+      const userToAdd = {
+        id: this.user.uid,
+        lastSignInTime: this.user.metadata.lastSignInTime,
+        creationTime: this.user.metadata.creationTime,
+        email: this.user.email,
+        location: this.selectedCountry, // Update location to use selectedCountry
+        user_name: this.username,
+        chats_binome:[],
+        chats_group:[],
+        image:this.image
+      
+      };
+  
+      await projectFirestore.collection('users').doc(this.user.uid).set(userToAdd);
+      console.log("User added successfully with ID:", this.user.uid);
+  
+      setUser(this.user);
+      this.$router.push('/whatsappHome');
+    } catch (error) {
+      console.error("Error creating user:", error);
+    }
+  },
+  
+      GOOGLE() {
+        signInGoogle();
+        this.$router.push('/whatsappHome');
+      }
+    }
+  };
+  </script>
+  
+
+  <style scoped>
+.signup {
+  max-width: 300px;
+  margin: auto;
+  margin-top: 50px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+label {
+  display: block;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select {
+  width: 100%;
+  padding: 5px;
+  font-size: 16px;
+}
+
+select {
+  margin-left: 10px;
+}
+
+button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #218838;
+}
+
+.location-input {
+  display: flex;
+  gap: 10px;
+}
+
+.location-input input[type="text"] {
+  flex: 1;
+}
+
+.location-input select {
+  flex: 1;
+}
+
+.dietary-checkboxes {
+  display: flex;
+  flex-wrap: wrap; /* Allow checkboxes to wrap on multiple lines */
+}
+
+.dietary-checkboxes label {
+  margin-right: 10px; /* Add spacing between checkboxes */
+}
+
+.flag-icon {
+  max-width: 30px; /* Set maximum width for flag icons */
+}
+</style>
+  
+  
+// File: src/components/UserState.js
+let currentUser = null;
+
+const setUser = (user) => {
+  currentUser = user;
+};
+
+const getUser = () => {
+  return currentUser;
+};
+
+export { setUser, getUser };
+
+// File: src/components/WhatsappHome.vue
+<template>
+  <nav class="navbar professional">
+    <p @click="goto_profile" :class="{ 'active': go }">Profile</p>
+    <p @click="goto_home" :class="{ 'active': !go }">Home</p>
+    <router-link to="/create-chat" class="nav-link">
+      Create New Chat
+    </router-link>
+    <router-link to="/signout" class="nav-link">Sign out</router-link>
+    <router-link :to="'/notification/' + userId" :class="{ 'notification-link': hasNotifications, 'full-notifications': isNotificationsFull }" class="nav-link">Notification</router-link>
+  </nav>
+  <div class="main-container">
+    <profile v-if="go" />
+    <chat v-else :user-data="userData" />
+  </div>
+  <div v-if="showPopup" class="notification-popup">
+    <p>You got a new notification</p>
+    <button @click="closePopup">Close</button>
+  </div>
+</template>
+
+<script>
+import { auth, projectFirestore } from '@/firebase/config.js'; // Adjusted import for simplicity
+import profile from "@/components/profile.vue";
+import chat from "@/components/Home.vue";
+
+export default {
+  name: "whatsappHome",
+  components: { profile, chat },
+  data() {
+    return {
+      go: false,
+      userId: null,
+      userData: null,
+      unsubscribeUserData: null,
+      hasNotifications: true,
+      isNotificationsFull: false,
+      showPopup: false,
+    };
+  },
+  created() {
+    this.fetchUserData();
+  },
+  methods: {
+    goto_profile() {
+      this.go = true;
+    },
+    goto_home() {
+      this.go = false;
+    },
+    fetchUserData() {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = projectFirestore.collection('users').doc(user.uid);
+        this.unsubscribeUserData = userDoc.onSnapshot((doc) => {
+          if (doc.exists) {
+            this.userData = doc.data();
+            this.userId = user.uid;
+            this.checkNotifications();
+          } else {
+            console.log("No such document!");
+          }
+        });
+      } else {
+        console.log("No user is signed in.");
+      }
+    },
+    checkNotifications() {
+      if (this.userData.notifications && this.userData.notifications.length > 0) {
+        this.hasNotifications = true;
+        
+        const newNotification = this.userData.notifications.some(
+          notification => notification.status === "unread"
+        );
+        this.isNotificationsFull = newNotification;
+
+        if (newNotification) {
+          this.showPopup = true;
+        }
+      } else {
+        this.hasNotifications = false;
+        this.isNotificationsFull = false;
+      }
+    },
+    closePopup() {
+      this.showPopup = false;
+    }
+  },
+  beforeDestroy() {
+    if (this.unsubscribeUserData) {
+      this.unsubscribeUserData();
+    }
+  }
+};
+</script>
+
+<style scoped>
+/* Navbar Styles */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #333; /* Dark background color */
+  padding: 10px;
+  position: fixed; /* Fix the navbar at the top */
+  top: 0;
+  left: 0;
+  width: 100%; /* Full width */
+  z-index: 1000; /* Ensure the navbar is above other content */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
+}
+
+.navbar p, .navbar .nav-link, .navbar .create-chat-link {
+  color: #fff; /* White text color */
+  margin: 0 10px;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+  font-size: 18px;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.navbar p:hover, .navbar .nav-link:hover, .navbar .create-chat-link:hover {
+  color: #000; /* Text color on hover */
+  background-color: #fff; /* Background color on hover */
+  border: 1px solid #000; /* Border color on hover */
+}
+
+.active {
+  font-weight: bold;
+}
+
+.notification-link {
+  background-color: transparent; /* Remove red background */
+  color: white; /* Keep white text color */
+}
+
+.full-notifications {
+  background-color: red;
+}
+
+.professional p:first-child {
+  margin-left: 0;
+}
+
+.professional p:last-child {
+  margin-right: 0;
+}
+
+/* Main Container Adjustments */
+.main-container {
+  width: 100%;
+  margin: 0;
+  padding-top: 60px; /* Add padding to avoid content being hidden behind the navbar */
+}
+
+/* Notification Popup Styles */
+.notification-popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333;
+  color: #fff;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.notification-popup p {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+}
+
+.notification-popup button {
+  background-color: #00b09b;
+  border: none;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.notification-popup button:hover {
+  background-color: #009b85;
+}
+
+/* Additional styles for responsiveness */
+@media screen and (max-width: 600px) {
+  .navbar p, .navbar .nav-link, .navbar .create-chat-link {
+    margin: 0 5px;
+  }
+  .create-chat-link button {
+    width: 100%;
+    padding: 8px 15px;
+    font-size: 16px;
+  }
+}
+</style>
+
+// File: src/components/notification.vue
+<template>
+    <div>
+      <h2>Notifications</h2>
+      <router-link to="/WhatsappHome" class="back-link">Back to Home</router-link>
+      <ul>
+        <li v-for="notification in notifications" :key="notification.id">
+          <strong>{{ notification.chatname }}</strong>: {{ notification.text }} {{ notification.status }}
+        </li>
+      </ul>
+      <button @click="updateNotificationsToRead">I clicked</button>
+    </div>
+  </template>
+  
+  <script>
+  import { projectFirestore } from '@/firebase/config.js';
+  
+  export default {
+    name: "Notifications",
+    data() {
+      return {
+        notifications: []
+      };
+    },
+    async created() {
+      await this.fetchNotifications();
+    },
+    methods: {
+      async fetchNotifications() {
+        try {
+          const userId = this.$route.params.userId;
+          if (userId) {
+            const userDoc = await projectFirestore.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              this.notifications = userData.notifications || [];
+            } else {
+              console.log("No such document!");
+            }
+          } else {
+            console.log("No user ID provided.");
+          }
+        } catch (error) {
+          console.error("Error fetching notifications: ", error);
+        }
+      },
+      async updateNotificationsToRead() {
+        try {
+          const userId = this.$route.params.userId;
+          if (userId) {
+            const userDoc = await projectFirestore.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              const notifications = userData.notifications || [];
+              notifications.forEach((notification, index) => {
+                notification.status = 'read'; // Update the status locally
+              });
+              await projectFirestore.collection('users').doc(userId).update({
+                notifications: notifications // Update the entire notifications array
+              });
+              this.notifications = notifications; // Reflect the changes in the component's data
+            }
+          }
+        } catch (error) {
+          console.error("Error updating notifications: ", error);
+        }
+      }
+    }
+  };
+  </script>
+  
+  <style scoped>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #007BFF;
+    text-decoration: none;
+    font-size: 16px;
+  }
+  
+  .back-link:hover {
+    text-decoration: underline;
+  }
+  
+  /* Add other styles as needed */
+  </style>
+  
+// File: src/components/profile.vue
+<template>
+  <div class="profile">
+    <h1>User Profile</h1>
+    <div v-if="loading">Loading...</div>
+    <div v-if="error">{{ error }}</div>
+    <div v-if="user" class="profile-content">
+      <img :src="userDoc.image" alt="Profile Picture" class="profile-image"/>
+      <div class="profile-info">
+        <div v-if="!editing">
+          <p><strong>Name:</strong> {{ userDoc.user_name }}</p>
+          <p><strong>Email:</strong> {{ userDoc.email }}</p>
+          <p><strong>Location:</strong> {{ userDoc.location }}</p>
+          <button @click="editProfile">Edit</button>
+        </div>
+        <div v-else>
+          <div>
+            <label>
+              <strong>Image URL:</strong>
+              <input v-model="userDoc.image" />
+            </label>
+          </div>
+          <div>
+            <label>
+              <strong>Name:</strong>
+              <input v-model="userDoc.user_name" />
+            </label>
+          </div>
+          <div>
+            <label>
+              <strong>Location:</strong>
+              <input v-model="locationQuery" @input="fetchCountries" />
+            </label>
+            <ul v-if="countries.length">
+              <li v-for="country in countries" :key="country.cca3" @click="selectCountry(country.name.common)">
+                {{ country.name.common }}
+              </li>
+            </ul>
+          </div>
+          <button @click="saveProfile">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { projectFirestore } from '@/firebase/config.js';
+import { getUser } from './UserState.js';
+
+export default {
+  name: 'Profile',
+  data() {
+    return {
+      user: null,
+      userDoc: null,
+      loading: true,
+      error: null,
+      editing: false,
+      locationQuery: '',
+      countries: []
+    };
+  },
+  async beforeMount() {
+    try {
+      this.user = getUser();
+      const id = this.user.uid;
+      const doc = await projectFirestore.collection('users').doc(id).get();
+      this.userDoc = doc.data();
+    } catch (err) {
+      this.error = 'Failed to load user data.';
+    } finally {
+      this.loading = false;
+    }
+  },
+  methods: {
+    editProfile() {
+      this.editing = true;
+    },
+    async saveProfile() {
+      this.loading = true;
+      try {
+        const id = this.user.uid;
+        await projectFirestore.collection('users').doc(id).update(this.userDoc);
+        this.error = null;
+        this.editing = false;
+      } catch (err) {
+        this.error = 'Failed to save user data.';
+      } finally {
+        this.loading = false;
+      }
+    },
+    async fetchCountries() {
+      if (this.locationQuery.length > 2) {
+        try {
+          const response = await fetch('https://restcountries.com/v3.1/all');
+          const data = await response.json();
+          this.countries = data.filter(country =>
+            country.name.common.toLowerCase().includes(this.locationQuery.toLowerCase())
+          );
+        } catch (err) {
+          console.error('Failed to fetch countries:', err);
+        }
+      } else {
+        this.countries = [];
+      }
+    },
+    selectCountry(countryName) {
+      this.userDoc.location = countryName;
+      this.locationQuery = countryName;
+      this.countries = [];
+    }
+  }
+};
+</script>
+
+<style scoped>
+.profile {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #f7f7f7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.profile-content {
+  display: flex;
+  align-items: flex-start;
+}
+
+.profile img.profile-image {
+  margin-right: 20px;
+  max-width: 150px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info p {
+  margin: 10px 0;
+}
+
+.profile-info button {
+  padding: 10px 20px;
+  margin: 5px 5px;
+  background-color: #555;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.profile-info button:hover {
+  background-color: #444;
+}
+
+.profile-info input {
+  width: 100%;
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-top: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.3s ease;
+}
+
+.profile-info input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+li {
+  cursor: pointer;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  transition: background-color 0.3s ease;
+}
+
+li:hover {
+  background-color: #f0f0f0;
+}
+</style>
+
+// File: src/components/signout.vue
+<template>
+    <div class="signout-container">
+      <p class="signout-message">Are you sure you want to sign out?</p>
+      <button @click="signOut" class="signout-button signout-button1">Sign Out</button>
+      <button @click="cancel" class="signout-button cancel">Cancel</button>
+    </div>
+  </template>
+  
+  <script>
+  import { auth, projectFirestore } from '@/firebase/config.js';
+
+  export default {
+    name: 'SignOut',
+    methods: {
+      async signOut() {
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            const userId = user.uid;
+            await projectFirestore.collection('users').doc(userId).update({
+              connected: false
+            });
+          }
+          await auth.signOut();
+          this.$router.push('/'); // Redirect to Home or any other page
+        } catch (error) {
+          console.error('Error signing out:', error.message);
+        }
+      },
+      cancel() {
+        this.$router.push('/WhatsappHome');
+      }
+    }
+  };
+</script>
+
+  
+  <style scoped>
+  .signout-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: 50px auto;
+    text-align: center;
+  }
+  
+  .signout-message {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .signout-button {
+    
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    outline: none;
+  }
+  
+  .signout-button1{
+    background-color: #ff0000;
+  }
+  .signout-button1:hover {
+    background-color: #cc0000;
+    transform: translateY(-2px);
+  }
+  
+  .cancel:active {
+    background-color: #423f3f;
+    transform: translateY(0);
+  }
+  .cancel:hover {
+    background-color: #423f3f;
+    transform: translateY(-2px);
+  }
+  
+  .signout-button1:active {
+    background-color: #b30000;
+    transform: translateY(0);
+  }
+
+  .cancel{
+    background-color: #989393;
+  }
+  </style>
+// File: src/components/test.vue
+<template>
+    LOGGED IN merci hh {{ user.uid }}
+    <p>Email: {{ user.email }}</p>
+    <p>Sign-in time: {{ user.metadata.lastSignInTime }}</p>
+    <p>Creation time: {{ user.metadata.creationTime }}</p>
+</template>
+
+<script>
+import {getUser} from './UserState'
+export default{
+    data(){
+        return {
+            user:null
+        }
+    },
+    beforeMount(){
+        this.user=getUser();
+    }
+    
+}
+
+</script>
+
+// File: src/firebase/config.js
+import firebase from 'firebase/app'
+import 'firebase/auth'
+import 'firebase/firestore'
+import {setUser} from '../components/UserState'
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAzanJSdxCJkH-Sxg7tJ_cNwD31tt487zs",
+  authDomain: "connectify-595ba.firebaseapp.com",
+  projectId: "connectify-595ba",
+  storageBucket: "connectify-595ba.appspot.com",
+  messagingSenderId: "227159052993",
+  appId: "1:227159052993:web:675ac2698a3f703e913a40",
+  measurementId: "G-BQ7GRLDV4L"
+};
+
+
+firebase.initializeApp(firebaseConfig)
+const auth = firebase.auth()
+const projectFirestore = firebase.firestore()
+
+const signInGoogle = async () => {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await firebase.auth().signInWithPopup(provider);
+    console.log('User signed in successfully:', result.user);
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+  }
+};
+
+export {auth,projectFirestore,signInGoogle}
+
+
+// File: src/firebase/db.js
+const firebase = require("firebase/app");
+require("firebase/firestore");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAzanJSdxCJkH-Sxg7tJ_cNwD31tt487zs",
+  authDomain: "connectify-595ba.firebaseapp.com",
+  projectId: "connectify-595ba",
+  storageBucket: "connectify-595ba.appspot.com",
+  messagingSenderId: "227159052993",
+  appId: "1:227159052993:web:675ac2698a3f703e913a40",
+  measurementId: "G-BQ7GRLDV4L"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+// Access Firestore
+const db = firebase.firestore();
+
+// Data to add
+const usersData = [
+ 
+      {
+        id:"",
+        lastSignInTime: "",
+        creationTime: "",
+        email: "",
+        location:"",
+        user_name:"",
+        photo_url:"",
+        chats_binome:["id1","id2"],
+        chats_group:["id1","id2"],
+      },
+      
+  
+  
+];
+
+// Function to add data to Firestore
+const addusersToFirestore = async (usersData) => {
+  try {
+    // Loop through each post and add it to Firestore
+    for (const user of usersData) {
+      // Use set with merge to add or update the document
+      await db
+        .collection("users")
+        
+        .add(user);
+    }
+    console.log("users added to Firestore successfully!");
+  } catch (error) {
+    console.error("Error adding users to Firestore: ", error);
+  }
+};
+
+// Call the function to add posts data to Firestore
+//addusersToFirestore(usersData);
+
+
+const messages_binom_Data = [
+ 
+  {
+    last_msg:{
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },
+    list_mess:[{
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },{
+      sender:"Pr7EGX0BD3YzCLZ7vG55fQCZfD73",
+      timestamp:"9:10 am",
+      text:"hi",
+      viewed:true,
+      
+    }]
+  },
+  
+
+
+];
+
+const addmessage1ToFirestore = async (messages_binom_Data) => {
+  try {
+  // Loop through each post and add it to Firestore
+  for (const mess of messages_binom_Data) {
+    // Use set with merge to add or update the document
+    await db
+      .collection("messages_binome")
+      
+      .add(mess);
+  }
+  console.log("messages_binome added to Firestore successfully!");
+  } catch (error) {
+  console.error("Error adding users to Firestore: ", error);
+  }
+  };
+  
+  // Call the function to add posts data to Firestore
+addmessage1ToFirestore(messages_binom_Data);
+
+const messages_group_Data = [
+ 
+  {
+    last_msg:{
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },
+    list_mess:[{
+      sender:"dgEo1kPLwBaphz9zDwsCeNdwA6j1",
+      timestamp:"10:10 am",
+      text:"hello",
+      viewed:true,
+    
+    },{
+      sender:"Pr7EGX0BD3YzCLZ7vG55fQCZfD73",
+      timestamp:"9:10 am",
+      text:"hi",
+      viewed:true,
+      
+    }]
+  },
+];
+
+// Function to add data to Firestore
+const addmessagesgroupToFirestore = async (messages_group_Data) => {
+try {
+// Loop through each post and add it to Firestore
+for (const mess of messages_group_Data) {
+  // Use set with merge to add or update the document
+  await db
+    .collection("messages_group")
+    
+    .add(mess);
+}
+console.log("messages_group added to Firestore successfully!");
+} catch (error) {
+console.error("Error adding users to Firestore: ", error);
+}
+};
+
+// Call the function to add posts data to Firestore
+addmessagesgroupToFirestore(messages_group_Data);
+
+// File: src/main.js
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
+
+createApp(App).use(router).mount('#app')
+
+// File: src/router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+
+import HomeView from '../views/HomeView.vue'
+import Login from '../components/Login.vue';
+import signout from '../components/signout.vue';
+import Signin from '../components/Signin.vue';
+import WhatsappHome from '@/components/WhatsappHome.vue';
+import CreateChat from '@/components/CreateChat.vue';
+import ProfileOther from '@/views/ProfileOther.vue'
+import notification from '../components/notification.vue';
+import AdminControls from '@/components/AdminControls.vue';
+
+
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: HomeView
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/Signin',
+    name: 'signin',
+    component: Signin
+  },
+  {
+    path:'/whatsappHome',
+    name: 'whatsappHome',
+    component: WhatsappHome
+  }
+  ,{
+    path:'/create-chat',
+    name: 'CreateChat',
+    component: CreateChat
+  },
+  {
+    path: '/signout',
+    name: 'signout',
+    component: signout
+  },
+  {
+    path: '/notification/:userId',
+    name: 'notificationut',
+    component: notification,
+    props:true
+  },
+  {
+    path:'/profile_other/:id',
+    name:'ProfileOther',
+    component:ProfileOther,
+    props:true
+  },
+  {
+    path: '/admin/:chatId',
+    name: 'AdminControls',
+    component: AdminControls,
+    props: true
+  }
+];
+
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
+  routes
+})
+
+export default router
+// File: src/views/AboutView.vue
+<template>
+  <div class="about">
+    <h1>This is an about page</h1>
+  </div>
+</template>
+
+// File: src/views/HomeView.vue
+<template>
+  <div class="cont">
+    <nav class="navbar professional">
+      <p @click="make_login" :class="{ 'active': login }">Login</p>
+      <p @click="make_signup" :class="{ 'active': !login }">Sign Up</p>
+    </nav>
+    <Login v-if="login"/>
+    <Signin v-else/>
+  </div>
+</template>
+
+<script>
+import Login from '@/components/Login.vue';
+import Signin from '@/components/Signin.vue';
+
+
+export default {
+  name: 'HomeView',
+  components: {
+    Login,
+    Signin
+  },
+  data(){
+    return{
+      login: true
+    }
+  },
+  methods:{
+    make_login(){
+      this.login = true;
+    },
+    make_signup(){
+      this.login = false;
+    }
+  }
+}
+</script>
+
+<style scoped>
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #333; /* Dark background color */
+  padding: 10px;
+}
+.cont{
+  width:100%
+}
+.navbar p {
+  color: #fff; /* White text color */
+  margin: 0 20px;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+  font-size: 18px;
+  transition: all 0.3s ease-in-out;
+}
+
+.navbar p:hover {
+  opacity: 0.8;
+}
+
+.active {
+  font-weight: bold;
+}
+
+.professional p:first-child {
+  margin-left: 0;
+}
+
+.professional p:last-child {
+  margin-right: 0;
+}
+
+/* Additional styles for responsiveness */
+@media screen and (max-width: 600px) {
+  .navbar p {
+    margin: 0 10px;
+  }
+}
+</style>
+
+// File: src/views/ProfileOther.vue
+<template>
+    <div>
+      <h1>Profile</h1>
+      <div v-if="userData">
+        <p>User Name: {{ userData.user_name }}</p>
+        <p v-if="userData.connected">Status: Online</p>
+        <p v-else>Status: Offline</p>
+        <img :src="userData.image" alt="User Profile Picture" />
+        <p>Email: {{ userData.email }}</p>
+        <p>Location: {{ userData.location }}</p>
+      </div>
+      <div v-else>
+        <p>Loading user data...</p>
+      </div>
+      <button @click="go_home()">Go Home</button>
+    </div>
+  </template>
+  
+  <script>
+  import { projectFirestore } from '@/firebase/config.js';
+  
+  export default {
+    props: ['id'],
+    data() {
+      return {
+        userData: null,
+        unsubscribe: null // Store unsubscribe function
+      };
+    },
+    async created() {
+      // Fetch user data when the component is created
+      await this.fetchUserData();
+      // Subscribe to real-time updates
+      this.subscribeToUserData();
+    },
+    methods: {
+      async fetchUserData() {
+        try {
+          const userDoc = await projectFirestore.collection('users').doc(this.id).get();
+          if (userDoc.exists) {
+            this.userData = userDoc.data();
+          } else {
+            console.error('User document not found');
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      },
+      subscribeToUserData() {
+        this.unsubscribe = projectFirestore.collection('users').doc(this.id)
+          .onSnapshot((doc) => {
+            if (doc.exists) {
+              // Update userData with the new data from the snapshot
+              this.userData = doc.data();
+            }
+          });
+      },
+      go_home(){
+        this.unsubscribe(); // Unsubscribe from real-time updates
+        this.$router.push('/whatsappHome');
+      }
+    },
+    beforeUnmount() {
+      // Unsubscribe from real-time updates when the component is unmounted
+      if (this.unsubscribe) {
+        this.unsubscribe();
+      }
+    }
+  };
+  </script>
+  
