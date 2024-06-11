@@ -108,6 +108,7 @@ export default {
 
         const userToAdd = {
           id: this.user.uid,
+          connected:true,
           lastSignInTime: this.user.metadata.lastSignInTime,
           creationTime: this.user.metadata.creationTime,
           email: this.user.email,
