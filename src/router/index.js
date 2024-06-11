@@ -8,6 +8,8 @@ import WhatsappHome from '@/components/WhatsappHome.vue';
 import CreateChat from '@/components/CreateChat.vue';
 import ProfileOther from '@/views/ProfileOther.vue'
 import notification from '../components/notification.vue';
+import AdminControls from '@/components/AdminControls.vue';
+
 
 const routes = [
   {
@@ -51,6 +53,12 @@ const routes = [
     name:'ProfileOther',
     component:ProfileOther,
     props:true
+  },
+  {
+    path: '/admin/:chatId',
+    name: 'AdminControls',
+    component: AdminControls,
+    props: true
   }
 ];
 

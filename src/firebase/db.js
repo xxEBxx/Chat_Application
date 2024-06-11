@@ -128,9 +128,6 @@ const messages_group_Data = [
       
     }]
   },
-  
-
-
 ];
 
 // Function to add data to Firestore

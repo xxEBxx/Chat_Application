@@ -19,6 +19,7 @@
     <div class="input-container">
       <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message" class="message-input">
       <button @click="sendMessage" class="send-button">Send</button>
+      <button @click="passToAdmin" class="remove-button">...</button>
     </div>
   </div>
 </template>
@@ -27,6 +28,7 @@
 import { projectFirestore } from '@/firebase/config.js';
 import firebase from 'firebase/app';
 import { reactive, ref, onMounted, watch } from 'vue';
+import {useRouter} from 'vue-router';
 
 export default {
   name: 'ChatDetailsGrp',
@@ -44,6 +46,7 @@ export default {
     const chat = ref({});
     const chatTitle = ref('');
     let unsubscribe = null;
+    const router= useRouter();
 
     const fetchChatDetails = async () => {
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -57,6 +60,18 @@ export default {
       }
     };
 
+    const passToAdmin = ()=>{
+     
+        const routeParams = {
+          chatId: props.id
+        };
+        const routeOptions = {
+          name: 'AdminControls',
+          params: routeParams
+        };
+        router.push(routeOptions);
+    };
+    
     const subscribeToMessages = () => {
       if (unsubscribe) unsubscribe(); // Unsubscribe from previous chat
       const chatRef = projectFirestore.collection('messages_group').doc(props.id);
@@ -182,7 +197,8 @@ const sendMessage = async () => {
       formatTimestamp,
       isMessageFullyViewed,
       currentUser,
-      chatTitle
+      chatTitle,
+      passToAdmin
     };
   }
 };
