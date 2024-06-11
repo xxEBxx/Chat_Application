@@ -14,6 +14,7 @@
         class="message-input"
       />
       <button @click="submitGroupChat" class="submit-button">Create Group Chat</button>
+      <button @click="cancelCreation" class="cancel-button">Cancel</button>
     </div>
   </template>
   
@@ -116,37 +117,67 @@
           console.error('Error sending notifications:', error);
         }
       },
+      cancelCreation() {
+        this.router.push('/WhatsappHome');
+      },
     },
   };
   </script>
   
   <style scoped>
   .create-group-chat-wrapper {
-    margin: 20px;
-    padding: 20px;
-    background: #f5f5f5;
+    margin: 20px auto;
+    padding: 30px;
+    max-width: 500px;
+    background: #ffffff;
     border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 24px;
   }
   
   .message-input {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
     border-radius: 5px;
+    font-size: 16px;
+  }
+  
+  .submit-button,
+  .cancel-button {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    margin-bottom: 10px;
   }
   
   .submit-button {
     background-color: #007bff;
     color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    cursor: pointer;
-    margin-right: 10px;
   }
   
   .submit-button:hover {
     background-color: #0056b3;
   }
+  
+  .cancel-button {
+    background-color: #dc3545;
+    color: white;
+  }
+  
+  .cancel-button:hover {
+    background-color: #c82333;
+  }
   </style>
+  
